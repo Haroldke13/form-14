@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+# Put the Form 14 deployment into maintenance mode and restore it afterwards.
+set -euo pipefail
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_deploy_common.sh
+source "$APP_DIR/_deploy_common.sh"
+
+readonly WEB_CONTAINER="form14_web"
+readonly TUNNEL_CONTAINERS=(
+  "form14_cloudflared"
+  "form14_cloudflared_dummy"
+)
+readonly TUNNEL_SERVICES=(
+  "cloudflared"
+  "cloudflared_dummy"
+)
+readonly TUNNEL_COMPOSE_FILES=(
+  "docker-compose.cloudflare.yml"
+  "docker-compose.cloudflare.dummy.yml"
+)
+readonly TUNNEL_TOKEN_FILES=(
+  "$APP_DIR/.cloudflared/returnsform14-tunnel.token"
+  "$APP_DIR/.cloudflared/dummy-tunnel.token"
+)
+
+COMPOSE_ARGS=()
+ACTIVE_TUNNEL_CONTAINERS=()
+ACTIVE_TUNNEL_SERVICES=()
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./ONGEA_MBAYA --close
+  ./ONGEA_MBAYA --reopen
+
+Actions:
+  --close   Stop and remove the Form 14 web container and every configured
+            Cloudflare Tunnel connector. This is the maintenance mode.
+  --reopen  Start the cached Form 14 image, wait until it is healthy, and then
+            restore every configured Cloudflare Tunnel connector.
+
+Only the Form 14 containers are affected. Other Docker applications on this
+host are left running.
+EOF
+}
+
+container_exists() {
+  docker_cmd container inspect "$1" >/dev/null 2>&1
+}
+
+container_is_running() {
+  [[ "$(docker_cmd container inspect --format '{{.State.Running}}' "$1")" == "true" ]]
+}
+
+deployment_mode() {
+  if external_postgres_enabled; then
+    printf '%s' "postgres"
+  else
+    printf '%s' "sqlite"
+  fi
+}
+
+prepare_compose_args() {
+  local mode index token_file compose_file
+
+  mode="$(deployment_mode)"
+  COMPOSE_ARGS=(--env-file "$ENV_FILE" -f "$(compose_file_for_mode "$mode")")
+  ACTIVE_TUNNEL_CONTAINERS=()
+  ACTIVE_TUNNEL_SERVICES=()
+
+  for index in "${!TUNNEL_CONTAINERS[@]}"; do
+    token_file="${TUNNEL_TOKEN_FILES[$index]}"
+    compose_file="${TUNNEL_COMPOSE_FILES[$index]}"
+
+    if [[ -s "$token_file" ]]; then
+      ensure_file_exists "$APP_DIR/$compose_file"
+      COMPOSE_ARGS+=(-f "$compose_file")
+      ACTIVE_TUNNEL_CONTAINERS+=("${TUNNEL_CONTAINERS[$index]}")
+      ACTIVE_TUNNEL_SERVICES+=("${TUNNEL_SERVICES[$index]}")
+    else
+      log_warn "Cloudflare connector ${TUNNEL_CONTAINERS[$index]} is not configured because its token file is missing: $token_file"
+    fi
+  done
+
+  log_info "Using the ${mode} Form 14 deployment configuration."
+}
+
+remove_leftover_stack_containers() {
+  local container
+
+  # `docker compose down` normally removes these. The explicit cleanup also
+  # handles containers created by an earlier Compose configuration.
+  for container in "$WEB_CONTAINER" "${TUNNEL_CONTAINERS[@]}"; do
+    if container_exists "$container"; then
+      log_info "Removing remaining Form 14 container: ${container}"
+      docker_cmd rm -f "$container" >/dev/null
+    fi
+  done
+}
+
+close_for_maintenance() {
+  prepare_compose_args
+  log_info "Stopping the Form 14 web service and configured Cloudflare Tunnel connector(s) for maintenance."
+  docker_compose_cmd "${COMPOSE_ARGS[@]}" down
+  remove_leftover_stack_containers
+  log_info "Maintenance mode is active. Form 14 and its Cloudflare Tunnel connector(s) are down."
+}
+
+wait_for_web_health() {
+  local health
+
+  log_info "Waiting for ${WEB_CONTAINER} to become healthy."
+  for _ in $(seq 1 60); do
+    if container_exists "$WEB_CONTAINER" && container_is_running "$WEB_CONTAINER"; then
+      health="$(docker_cmd container inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}running{{end}}' "$WEB_CONTAINER")"
+      if [[ "$health" == "healthy" || "$health" == "running" ]]; then
+        return 0
+      fi
+    fi
+    sleep 2
+  done
+
+  docker_compose_cmd "${COMPOSE_ARGS[@]}" ps >&2 || true
+  die "${WEB_CONTAINER} did not become healthy. The Cloudflare Tunnel connector(s) were not started."
+}
+
+reopen_after_maintenance() {
+  local container
+
+  prepare_compose_args
+  [[ "${#ACTIVE_TUNNEL_CONTAINERS[@]}" -gt 0 ]] || \
+    die "No Cloudflare tunnel token files are configured. Restore a token file in $APP_DIR/.cloudflared before reopening."
+
+  log_info "Starting ${WEB_CONTAINER} from its existing Docker image."
+  docker_compose_cmd "${COMPOSE_ARGS[@]}" up -d --no-build web
+  wait_for_web_health
+
+  log_info "Restoring configured Cloudflare Tunnel connector(s)."
+  docker_compose_cmd "${COMPOSE_ARGS[@]}" up -d --no-build "${ACTIVE_TUNNEL_SERVICES[@]}"
+
+  for container in "${ACTIVE_TUNNEL_CONTAINERS[@]}"; do
+    if ! container_exists "$container" || ! container_is_running "$container"; then
+      docker_compose_cmd "${COMPOSE_ARGS[@]}" ps >&2 || true
+      die "Cloudflare Tunnel connector did not start: ${container}"
+    fi
+  done
+
+  log_info "Form 14 is running and all configured Cloudflare Tunnel connector(s) have been restored."
+}
+
+[[ $# -eq 1 ]] || {
+  usage >&2
+  exit 2
+}
+
+case "$1" in
+  --close)
+    require_docker
+    require_env_file
+    close_for_maintenance
+    ;;
+  --reopen)
+    require_docker
+    require_env_file
+    reopen_after_maintenance
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
