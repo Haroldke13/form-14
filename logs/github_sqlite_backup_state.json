@@ -1,0 +1,623 @@
+{
+  "backup_file": "backup_10_09_2026_08-00-04.sqlite",
+  "commit_hash": "207463abdef2fe262d6f60761e6907aee703e2ad",
+  "database_state": {
+    "fingerprint": "042aa2b6f5ef2533792e693041f34cb16ed6b18b6f8ab629a5890ec90869e140",
+    "table_count": 33,
+    "tables": [
+      {
+        "columns": [
+          "id",
+          "key",
+          "value",
+          "updated_by_id",
+          "updated_at"
+        ],
+        "max_row_xmin": 873,
+        "row_count": 9,
+        "table": "admin_settings"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "question",
+          "intent",
+          "confidence",
+          "answer",
+          "result_token",
+          "result_path",
+          "user_id",
+          "created_at"
+        ],
+        "max_row_xmin": 867,
+        "row_count": 2,
+        "table": "data_analysis_bot_interactions"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "question",
+          "intent",
+          "target_domain",
+          "fields_hint_json",
+          "answer_style",
+          "dataset_split",
+          "created_at"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "data_analysis_training_questions"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "user_id",
+          "action",
+          "field_name",
+          "old_value",
+          "new_value",
+          "created_at"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 34854,
+        "table": "field_change_logs"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "context_json",
+          "search_index_json",
+          "updated_at"
+        ],
+        "max_row_xmin": 1163,
+        "row_count": 19,
+        "table": "field_help_cache"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "model_json",
+          "train_size",
+          "test_size",
+          "accuracy",
+          "updated_at"
+        ],
+        "max_row_xmin": 1167,
+        "row_count": 38,
+        "table": "field_help_decision_models"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "input_text",
+          "label",
+          "dataset_split",
+          "created_at"
+        ],
+        "max_row_xmin": 1166,
+        "row_count": 3800,
+        "table": "field_help_intent_samples"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "question",
+          "normalized_question",
+          "intent",
+          "route",
+          "response_source",
+          "answer",
+          "confidence",
+          "blocked",
+          "created_at"
+        ],
+        "max_row_xmin": 867,
+        "row_count": 4,
+        "table": "field_help_interactions"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "question",
+          "answer",
+          "source",
+          "score",
+          "created_at"
+        ],
+        "max_row_xmin": 867,
+        "row_count": 4,
+        "table": "field_help_memory"
+      },
+      {
+        "columns": [
+          "id",
+          "page_key",
+          "field_name",
+          "field_label",
+          "heading",
+          "is_allowed",
+          "is_disabled",
+          "is_required",
+          "used_in_sector_report",
+          "notes",
+          "updated_at"
+        ],
+        "max_row_xmin": 1164,
+        "row_count": 817,
+        "table": "field_help_rules"
+      },
+      {
+        "columns": [
+          "id",
+          "source_type",
+          "original_filename",
+          "stored_filename",
+          "status",
+          "total_rows",
+          "success_rows",
+          "error_rows",
+          "notes",
+          "created_by_id",
+          "created_at",
+          "completed_at"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "import_batches"
+      },
+      {
+        "columns": [
+          "id",
+          "batch_id",
+          "row_number",
+          "field_name",
+          "error_message",
+          "row_payload",
+          "created_at"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "import_row_errors"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "item",
+          "number",
+          "value"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 9508,
+        "table": "pbo_assets"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "firm",
+          "auditor_name",
+          "practicing_no"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 1175,
+        "table": "pbo_auditors"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "bank_name",
+          "branch",
+          "account_number",
+          "currency"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 4102,
+        "table": "pbo_bank_accounts"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "partner_type",
+          "info_exchange",
+          "tech_support_to_partner",
+          "tech_support_from_partner",
+          "funding_to_partner",
+          "funding_from_partner",
+          "equipment_to_partner",
+          "equipment_from_partner"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 6822,
+        "table": "pbo_collaboration_networking"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "name",
+          "category",
+          "country",
+          "amount"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 10168,
+        "table": "pbo_donations"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "name",
+          "registration_no",
+          "country",
+          "amount"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "pbo_grants"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "activity",
+          "amount"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "pbo_iga"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "role",
+          "name",
+          "nationality",
+          "gender",
+          "email",
+          "residence",
+          "phone",
+          "kra_pin",
+          "professional_qualification",
+          "signature"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "pbo_officials"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "description",
+          "kenya_amount",
+          "other_amount"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 10251,
+        "table": "pbo_payments"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "sector",
+          "county",
+          "vulnerable_group",
+          "beneficiaries_no",
+          "spending_per_county",
+          "duration_years",
+          "completion_status",
+          "amount_spent_kenya",
+          "amount_spent_other"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 6919,
+        "table": "pbo_project_implementations"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "sector",
+          "carried_forward_kenya",
+          "carried_forward_other",
+          "started_kenya",
+          "started_other",
+          "completed_kenya",
+          "completed_other"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 6981,
+        "table": "pbo_projects_carried_out"
+      },
+      {
+        "columns": [
+          "id",
+          "user_id",
+          "filing_period",
+          "filling_fee",
+          "late_returns",
+          "penalty_paid",
+          "outstanding_penalty",
+          "financial_year_ending_month",
+          "form_14",
+          "audit_report",
+          "requests",
+          "date_received",
+          "received_by",
+          "filed_for_action_by_registry",
+          "date_filed_by_registry_for_action",
+          "designate_by_pco",
+          "date_assigned",
+          "review_acknowledgement",
+          "date_acknowledged_notice_sent",
+          "end_of_notice_period",
+          "notice_countdown",
+          "imputed_fields",
+          "risk_score",
+          "created_at",
+          "updated_at",
+          "submitted_at",
+          "last_activity_at",
+          "last_viewed_at",
+          "last_modified_by_id",
+          "workflow_status",
+          "review_status",
+          "reviewed_by_id",
+          "reviewed_at",
+          "review_notes",
+          "return_reason",
+          "duplicate_flag",
+          "data_source",
+          "import_batch_id",
+          "submission_token",
+          "reporting_period_start",
+          "reporting_period_end",
+          "reporting_period_start_raw",
+          "reporting_period_end_raw",
+          "pbo_name",
+          "pbo_name_normalized",
+          "pbo_registration_number",
+          "pbo_registration_date",
+          "kra_pin",
+          "postal_address",
+          "physical_address",
+          "telephone",
+          "cell_phone",
+          "email",
+          "website",
+          "social_media",
+          "contact_name",
+          "contact_position",
+          "contact_telephone",
+          "contact_email",
+          "contact_nationality",
+          "contact_gender",
+          "registration_number",
+          "pin_number",
+          "date_of_registration",
+          "scope",
+          "countries_of_operation",
+          "counties",
+          "assets_stolen",
+          "cash_balance_previous_year",
+          "income_b2_total",
+          "receipts_total",
+          "cash_bank_balance",
+          "audited",
+          "staff_kenyan_prev",
+          "staff_foreign_prev",
+          "staff_kenyan_current",
+          "staff_foreign_current",
+          "staff_kenyan_came_in",
+          "staff_foreign_came_in",
+          "staff_kenyan_left",
+          "staff_foreign_left",
+          "staff_other_kenyan_prev",
+          "staff_other_foreign_prev",
+          "staff_other_kenyan_current",
+          "staff_other_foreign_current",
+          "volunteers_kenyan_prev",
+          "volunteers_foreign_prev",
+          "volunteers_kenyan_current",
+          "volunteers_foreign_current",
+          "project_implementation_method",
+          "local_material",
+          "local_material_amount",
+          "local_labour",
+          "local_labour_amount",
+          "local_financial",
+          "local_financial_amount",
+          "local_other",
+          "local_other_specify",
+          "local_other_amount",
+          "gov_tax_waiver",
+          "gov_tax_waiver_amount",
+          "gov_other",
+          "gov_other_specify",
+          "gov_other_amount",
+          "collaboration_networking",
+          "number_of_directors",
+          "number_of_registered_members",
+          "number_of_board_meetings",
+          "election_frequency",
+          "election_frequency_other",
+          "date_last_agm",
+          "date_last_election",
+          "date_last_board_meeting",
+          "membership_number_of_directors",
+          "membership_number_of_registered_members",
+          "membership_number_of_board_meetings",
+          "membership_date_last_agm",
+          "membership_date_last_election",
+          "non_membership_number_of_directors",
+          "non_membership_number_of_board_meetings",
+          "non_membership_date_last_board_meeting",
+          "non_membership_date_last_election",
+          "submitter_fullname",
+          "signature",
+          "submission_date",
+          "edit_deadline",
+          "form_submission_deadline",
+          "return_date"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 3455,
+        "table": "pbo_reports"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "category",
+          "prev_year",
+          "curr_year"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 31635,
+        "table": "pbo_staff_biodata"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "item_description",
+          "quantity",
+          "exemption_type",
+          "estimated_tax_waived",
+          "certificate_approval_no"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "pbo_tax_waiver_items"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "training_type",
+          "kenyan_count",
+          "international_count"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 2711,
+        "table": "pbo_training_records"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "category",
+          "prev_year",
+          "curr_year"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 17420,
+        "table": "pbo_volunteer_biodata"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "category",
+          "kenyan_volunteer",
+          "kenyan_intern",
+          "international_volunteer",
+          "international_intern"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 2636,
+        "table": "pbo_volunteer_privileges"
+      },
+      {
+        "columns": [
+          "id",
+          "postal_code",
+          "town",
+          "updated_at"
+        ],
+        "max_row_xmin": 0,
+        "row_count": 0,
+        "table": "postal_code_cache"
+      },
+      {
+        "columns": [
+          "id",
+          "report_id",
+          "batch_id",
+          "uploaded_by_id",
+          "category",
+          "original_filename",
+          "stored_filename",
+          "storage_path",
+          "mime_type",
+          "file_size",
+          "sha256_hash",
+          "status",
+          "extracted_text",
+          "error_message",
+          "created_at"
+        ],
+        "max_row_xmin": 867,
+        "row_count": 2,
+        "table": "uploaded_files"
+      },
+      {
+        "columns": [
+          "id",
+          "user_id",
+          "report_id",
+          "action",
+          "route",
+          "summary",
+          "ip_address",
+          "user_agent",
+          "created_at"
+        ],
+        "max_row_xmin": 1317,
+        "row_count": 8759,
+        "table": "user_activity_logs"
+      },
+      {
+        "columns": [
+          "id",
+          "email",
+          "full_name",
+          "phone",
+          "department",
+          "must_change_password",
+          "password_hash",
+          "password_changed_at",
+          "role",
+          "is_superadmin",
+          "can_manage_all_records",
+          "is_authorized",
+          "authorized_at",
+          "authorized_by_id",
+          "last_login_at",
+          "last_login_ip",
+          "failed_login_attempts",
+          "last_failed_login_at",
+          "report_id"
+        ],
+        "max_row_xmin": 1310,
+        "row_count": 57,
+        "table": "users_for_form14"
+      }
+    ]
+  },
+  "updated_at": "2026-09-10T08:00:16+00:00"
+}

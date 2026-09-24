@@ -1,9 +1,47 @@
-.env.cloudflare
-.env.ngrok
+# Local configuration and credentials
+.env
+.env.*
+!.env.*.example
+application_default_credentials.json
+client_secret*.json
 .cloudflared/
 cloudflared/*.json
 cloudflared/cert.pem
+certs/
+*.key
+*.pem
+
+# Python caches and local environments
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.venv/
+venv/
+
+# Runtime data, databases, backups, and logs
+*.sqlite*
+*.db*
+*.sql
+*.zip
+backup_*
+backups/
 logs/
+instance/
+.ip_address_change_backups/
+db_bootstrap/
+
+# Generated/private data exports
+sectorreportDATA/
+static/extracted_xls/
+form14_data_analysis_*questions.json
+form14_data_analysis_training_dataset.json
+
+# Local reports and office exports (may contain personal data)
+*.xlsx
+*.csv
+*.docx
+contacts
+
+# Editor and OS artifacts
+.~lock.*
+.DS_Store
