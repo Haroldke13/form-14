@@ -878393,3 +878393,192 @@ The following paths are ignored by one of your .gitignore files:
 backup_24_09_2026_04-43-03.sqlite
 hint: Use -f if you really want to add them.
 hint: Disable this message with "git config set advice.addIgnoredFile false"
+[2026-09-24 04:44:01] Checking live database row-change fingerprint.
+[2026-09-24 04:44:05] Database changes detected; exporting live database from 'form14_web' to backup_24_09_2026_04-44-05.sqlite
+exporting_tables=33
+admin_settings	9
+data_analysis_bot_interactions	2
+data_analysis_training_questions	0
+field_change_logs	36621
+field_help_cache	19
+field_help_decision_models	38
+field_help_intent_samples	3800
+field_help_interactions	4
+field_help_memory	4
+field_help_rules	817
+import_batches	0
+import_row_errors	0
+pbo_assets	9832
+pbo_auditors	1226
+pbo_bank_accounts	4303
+pbo_collaboration_networking	7123
+pbo_donations	10593
+pbo_grants	0
+pbo_iga	0
+pbo_officials	0
+pbo_payments	10711
+pbo_project_implementations	7200
+pbo_projects_carried_out	7251
+pbo_reports	3634
+pbo_staff_biodata	33149
+pbo_tax_waiver_items	0
+pbo_training_records	2831
+pbo_volunteer_biodata	18273
+pbo_volunteer_privileges	2754
+postal_code_cache	0
+uploaded_files	2
+user_activity_logs	9026
+users_for_form14	57
+integrity_check=ok
+target=/tmp/backup_24_09_2026_04-44-05.sqlite
+bytes=17645568
+[2026-09-24 04:44:19] Verifying backup_24_09_2026_04-44-05.sqlite
+[2026-09-24 04:44:20] bytes=17645568
+[2026-09-24 04:44:20] integrity_check=ok
+[2026-09-24 04:44:20] table_count=33
+[2026-09-24 04:44:20] Committing and pushing backup changes
+[2026-09-24 04:44:20] ERROR: Git index already has staged changes. Commit or unstage them before running this backup job.
+[2026-09-24 04:45:01] Checking live database row-change fingerprint.
+[2026-09-24 04:45:06] Database changes detected; exporting live database from 'form14_web' to backup_24_09_2026_04-45-06.sqlite
+exporting_tables=33
+admin_settings	9
+data_analysis_bot_interactions	2
+data_analysis_training_questions	0
+field_change_logs	36621
+field_help_cache	19
+field_help_decision_models	38
+field_help_intent_samples	3800
+field_help_interactions	4
+field_help_memory	4
+field_help_rules	817
+import_batches	0
+import_row_errors	0
+pbo_assets	9832
+pbo_auditors	1226
+pbo_bank_accounts	4303
+pbo_collaboration_networking	7123
+pbo_donations	10593
+pbo_grants	0
+pbo_iga	0
+pbo_officials	0
+pbo_payments	10711
+pbo_project_implementations	7200
+pbo_projects_carried_out	7251
+pbo_reports	3634
+pbo_staff_biodata	33149
+pbo_tax_waiver_items	0
+pbo_training_records	2831
+pbo_volunteer_biodata	18273
+pbo_volunteer_privileges	2754
+postal_code_cache	0
+uploaded_files	2
+user_activity_logs	9026
+users_for_form14	57
+integrity_check=ok
+target=/tmp/backup_24_09_2026_04-45-06.sqlite
+bytes=17645568
+[2026-09-24 04:45:23] Verifying backup_24_09_2026_04-45-06.sqlite
+[2026-09-24 04:45:23] bytes=17645568
+[2026-09-24 04:45:23] integrity_check=ok
+[2026-09-24 04:45:23] table_count=33
+[2026-09-24 04:45:23] Committing and pushing backup changes
+The following paths are ignored by one of your .gitignore files:
+backup_24_09_2026_04-45-06.sqlite
+hint: Use -f if you really want to add them.
+hint: Disable this message with "git config set advice.addIgnoredFile false"
+[2026-09-24 04:46:02] Checking live database row-change fingerprint.
+[2026-09-24 04:46:06] Database changes detected; exporting live database from 'form14_web' to backup_24_09_2026_04-46-06.sqlite
+exporting_tables=33
+admin_settings	9
+data_analysis_bot_interactions	2
+data_analysis_training_questions	0
+field_change_logs	36621
+field_help_cache	19
+field_help_decision_models	38
+field_help_intent_samples	3800
+field_help_interactions	4
+field_help_memory	4
+field_help_rules	817
+import_batches	0
+import_row_errors	0
+pbo_assets	9832
+pbo_auditors	1226
+pbo_bank_accounts	4303
+pbo_collaboration_networking	7123
+pbo_donations	10593
+pbo_grants	0
+pbo_iga	0
+pbo_officials	0
+pbo_payments	10711
+pbo_project_implementations	7200
+pbo_projects_carried_out	7251
+pbo_reports	3634
+pbo_staff_biodata	33149
+pbo_tax_waiver_items	0
+pbo_training_records	2831
+pbo_volunteer_biodata	18273
+pbo_volunteer_privileges	2754
+postal_code_cache	0
+uploaded_files	2
+user_activity_logs	9026
+users_for_form14	57
+integrity_check=ok
+target=/tmp/backup_24_09_2026_04-46-06.sqlite
+bytes=17645568
+[2026-09-24 04:46:21] Verifying backup_24_09_2026_04-46-06.sqlite
+[2026-09-24 04:46:21] bytes=17645568
+[2026-09-24 04:46:21] integrity_check=ok
+[2026-09-24 04:46:21] table_count=33
+[2026-09-24 04:46:21] Committing and pushing backup changes
+The following paths are ignored by one of your .gitignore files:
+backup_24_09_2026_04-46-06.sqlite
+hint: Use -f if you really want to add them.
+hint: Disable this message with "git config set advice.addIgnoredFile false"
+[2026-09-24 04:47:01] Checking live database row-change fingerprint.
+[2026-09-24 04:47:07] Database changes detected; exporting live database from 'form14_web' to backup_24_09_2026_04-47-07.sqlite
+exporting_tables=33
+admin_settings	9
+data_analysis_bot_interactions	2
+data_analysis_training_questions	0
+field_change_logs	36621
+field_help_cache	19
+field_help_decision_models	38
+field_help_intent_samples	3800
+field_help_interactions	4
+field_help_memory	4
+field_help_rules	817
+import_batches	0
+import_row_errors	0
+pbo_assets	9832
+pbo_auditors	1226
+pbo_bank_accounts	4303
+pbo_collaboration_networking	7123
+pbo_donations	10593
+pbo_grants	0
+pbo_iga	0
+pbo_officials	0
+pbo_payments	10711
+pbo_project_implementations	7200
+pbo_projects_carried_out	7251
+pbo_reports	3634
+pbo_staff_biodata	33149
+pbo_tax_waiver_items	0
+pbo_training_records	2831
+pbo_volunteer_biodata	18273
+pbo_volunteer_privileges	2754
+postal_code_cache	0
+uploaded_files	2
+user_activity_logs	9026
+users_for_form14	57
+integrity_check=ok
+target=/tmp/backup_24_09_2026_04-47-07.sqlite
+bytes=17645568
+[2026-09-24 04:47:22] Verifying backup_24_09_2026_04-47-07.sqlite
+[2026-09-24 04:47:22] bytes=17645568
+[2026-09-24 04:47:22] integrity_check=ok
+[2026-09-24 04:47:22] table_count=33
+[2026-09-24 04:47:22] Committing and pushing backup changes
+The following paths are ignored by one of your .gitignore files:
+backup_24_09_2026_04-47-07.sqlite
+hint: Use -f if you really want to add them.
+hint: Disable this message with "git config set advice.addIgnoredFile false"
