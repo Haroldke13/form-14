@@ -1,7 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="app-page-container">
-<h2>Admin Operations Dashboard</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="mb-0">Admin Operations Dashboard</h2>
+  <div class="d-flex flex-wrap gap-2">
+    <form method="post" action="{{ url_for('admin_backup_database') }}" onsubmit="return confirm('Start a database backup and upload it to Google Drive now?');">
+      <button type="submit" class="btn btn-outline-success btn-sm">Backup to Google</button>
+    </form>
+    <a href="{{ url_for('authorize_accounts') }}" class="btn btn-outline-primary btn-sm">Manage Users</a>
+    <a href="{{ url_for('admin_field_help_rules') }}" class="btn btn-outline-primary btn-sm">Field Help Rules</a>
+  </div>
+</div>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-2">
@@ -26,88 +35,121 @@
 
 <div class="row g-4 mb-4">
   <div class="col-12 col-xl-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h4 class="card-title mb-0">Workflow Settings</h4>
-          <div class="d-flex gap-2">
-            {% if ocr_features_enabled %}
-            <a hidden href="{{ url_for('report_ocr_upload') }}" class="btn btn-outline-dark btn-sm">OCR Import</a>
-            <a hidden href="{{ url_for('report_ocr_batch_export') }}" class="btn btn-outline-secondary btn-sm">Batch OCR Excel</a>
-            {% endif %}
-            {% if current_user.is_superadmin %}
-            <a hidden href="{{ url_for('admin_uploaded_files') }}" class="btn btn-outline-danger btn-sm">Uploaded Files</a>
-            {% endif %}
-            <form method="post" action="{{ url_for('admin_backup_database') }}" onsubmit="return confirm('Start a database backup and upload it to Google Drive now?');">
-              <button type="submit" class="btn btn-outline-success btn-sm">Backup to Google</button>
-            </form>
-            <a href="{{ url_for('authorize_accounts') }}" class="btn btn-outline-primary btn-sm">Manage Users</a>
-            <a href="{{ url_for('admin_field_help_rules') }}" class="btn btn-outline-primary btn-sm">Field Help Rules</a>
+  <div class="card shadow-sm h-100">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h4 class="card-title mb-0">Review Queue</h4>
+          <span class="text-muted small">Submitted, validated, in review, and returned reports</span>
+        </div>
+        <form method="post" action="{{ url_for('approve_all_review_queue') }}" class="d-flex flex-wrap gap-2 align-items-start" onsubmit="return confirm('Approve all reports currently in the review queue?');">
+          <input type="text" class="form-control form-control-sm" name="review_notes" placeholder="Optional approval note">
+          <button type="submit" class="btn btn-success btn-sm">Approve All</button>
+        </form>
+      </div>
+      <div class="row g-2 align-items-end mb-3" id="review-queue-controls">
+        <div class="col-12 col-md-6 col-lg-5">
+          <label for="review-queue-search" class="form-label form-label-sm mb-1">Search queue</label>
+          <input
+            type="search"
+            id="review-queue-search"
+            class="form-control form-control-sm"
+            placeholder="Search by report ID, PBO, owner, workflow, review status"
+            autocomplete="off"
+          >
+        </div>
+        <div class="col-12 col-md-3 col-lg-2">
+          <label class="form-label form-label-sm mb-1 d-block">Show</label>
+          <div id="review-queue-per-page" class="btn-group btn-group-sm w-100" role="group" aria-label="Rows per page">
+            <button type="button" class="btn btn-primary" data-per-page="10" aria-pressed="true">10</button>
+            <button type="button" class="btn btn-outline-primary" data-per-page="25" aria-pressed="false">25</button>
+            <button type="button" class="btn btn-outline-primary" data-per-page="50" aria-pressed="false">50</button>
           </div>
         </div>
-        <form method="post" action="{{ url_for('admin_view') }}">
-          <div class="mb-3">
-            <label for="edit_deadline" class="form-label">Edit Deadline</label>
-            <input type="datetime-local" class="form-control" id="edit_deadline" name="edit_deadline" value="{{ deadlines.edit_deadline|default('', true) }}">
-          </div>
-          <div class="mb-3">
-            <label for="form_submission_deadline" class="form-label">Submission Deadline</label>
-            <input type="datetime-local" class="form-control" id="form_submission_deadline" name="form_submission_deadline" value="{{ deadlines.form_submission_deadline|default('', true) }}">
-          </div>
-          <button type="submit" class="btn btn-primary">Save Deadlines</button>
-        </form>
-        <div class="mt-3 small text-muted">
-          <div id="backup-status-panel"
-               data-status-url="{{ url_for('admin_backup_status') }}"
-               data-running="{{ 'true' if backup_runtime_status.running else 'false' }}">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-              <strong>Backup status:</strong>
-              <span id="backup-stage-badge" class="badge {% if backup_runtime_status.running %}bg-primary{% elif backup_runtime_status.last_backup_error %}bg-danger{% else %}bg-secondary{% endif %}">
-                {{ backup_runtime_status.stage or 'idle' }}
-              </span>
-            </div>
-            <div id="backup-detail" class="mt-2">{{ backup_runtime_status.detail or 'No backup currently running.' }}</div>
-            <div class="progress mt-3" role="progressbar" aria-label="Backup progress" aria-valuemin="0" aria-valuemax="100">
-              <div id="backup-progress-bar"
-                   class="progress-bar progress-bar-striped {% if backup_runtime_status.running %}progress-bar-animated{% endif %}"
-                   style="width: 0%">0%</div>
-            </div>
-            <div class="row g-2 mt-2 small">
-              <div class="col-12 col-md-6">
-                <div>Started: <span id="backup-started-at">{{ backup_runtime_status.started_at or 'Not running' }}</span></div>
-                <div>Last backup: <span id="backup-last-at">{{ backup_runtime_status.last_backup_at or 'Not run yet' }}</span></div>
-                <div>Archive: <span id="backup-last-archive">{{ backup_runtime_status.last_backup_archive or 'Not created yet' }}</span></div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div>Current table: <span id="backup-current-table">{{ backup_runtime_status.current_table or 'None' }}</span></div>
-                <div>Current file: <span id="backup-current-file">{{ backup_runtime_status.current_file or 'None' }}</span></div>
-                <div>Files uploaded: <span id="backup-files-counter">{{ backup_runtime_status.files_completed or 0 }}/{{ backup_runtime_status.files_total or 0 }}</span></div>
-              </div>
-            </div>
-            <div id="backup-last-error" class="mt-2 {% if backup_runtime_status.last_backup_error %}text-danger{% else %}text-muted{% endif %}">
-              {{ backup_runtime_status.last_backup_error or 'No backup errors recorded.' }}
-            </div>
-            <div id="backup-credential" class="mt-2 text-muted">
-              Credential:
-              <span id="backup-credential-summary">
-                {% if backup_runtime_status.drive_credential_type %}
-                  {{ backup_runtime_status.drive_credential_type }}{% if backup_runtime_status.drive_credential_source %} via {{ backup_runtime_status.drive_credential_source }}{% endif %}
-                {% else %}
-                  not checked yet
-                {% endif %}
-              </span>
-            </div>
-            <div id="backup-refresh-block" class="mt-2 {% if not backup_runtime_status.drive_refresh_command %}d-none{% endif %}">
-              <div class="fw-semibold text-warning">Refresh command</div>
-              <code id="backup-refresh-command" class="small">{{ backup_runtime_status.drive_refresh_command or '' }}</code>
-            </div>
-            <div id="backup-recommendation" class="mt-2 text-muted {% if not backup_runtime_status.drive_auth_recommendation %}d-none{% endif %}">
-              {{ backup_runtime_status.drive_auth_recommendation or '' }}
-            </div>
-          </div>
+        <div class="col-12 col-md-3 col-lg-5 d-flex justify-content-md-end">
+          <div class="small text-muted mt-2 mt-md-0" id="review-queue-count"></div>
         </div>
       </div>
+      <div class="table-responsive review-queue-scroll" id="review-queue-scroll">
+        <table id="review-queue-table" class="table table-sm align-middle review-queue-table">
+          <thead>
+            <tr>
+              <th>Report</th>
+              <th>Owner</th>
+              <th>Workflow</th>
+              <th>Review</th>
+              <th>Files</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for report in workflow_reports %}
+            <tr data-review-row="1">
+              <td>
+                <a href="{{ url_for('report_detail', report_id=report.id) }}">#{{ report.id }}</a>
+                <div>{{ report.pbo_name or 'Unnamed PBO' }}</div>
+                {% if report.duplicate_flag %}
+                <div class="text-danger small">Duplicate flag active</div>
+                <div class="text-danger small">
+                  {{ (report.pbo_name or ('Report #' ~ report.id)) ~ '__' ~ (report.reporting_period_start|format_date if report.reporting_period_start else 'NO_START_DATE') }}
+                </div>
+                {% endif %}
+              </td>
+              <td>{{ report.owner_display }}</td>
+              <td>{{ report.workflow_status }}</td>
+              <td>
+                <div>{{ report.review_status }}</div>
+                {% if report.reviewed_by %}
+                <small class="text-muted">By {{ report.reviewed_by.email }}</small>
+                {% endif %}
+              </td>
+              <td>
+                <div class="small">{{ report.uploaded_files|length }} file(s)</div>
+                <form method="post" action="{{ url_for('upload_report_file', report_id=report.id) }}" enctype="multipart/form-data" class="mt-2">
+                  <input type="hidden" name="category" value="supporting_document">
+                  <input type="file" class="form-control form-control-sm mb-2" name="file" required>
+                  <button type="submit" class="btn btn-outline-secondary btn-sm">Upload</button>
+                </form>
+              </td>
+              <td style="min-width: 280px;">
+                <form method="post" action="{{ url_for('update_report_workflow', report_id=report.id) }}">
+                  <div class="mb-2">
+                    <select class="form-select form-select-sm" name="workflow_action">
+                      <option value="validate">Validate</option>
+                      <option value="start_review">Start Review</option>
+                      <option value="approve">Approve</option>
+                      <option value="return">Return</option>
+                      <option value="submit">Resubmit</option>
+                    </select>
+                  </div>
+                  <div class="mb-2">
+                    <textarea class="form-control form-control-sm" name="review_notes" rows="2" placeholder="Review notes"></textarea>
+                  </div>
+                  <div class="mb-2">
+                    <input class="form-control form-control-sm" name="return_reason" placeholder="Return reason (if returning)">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-muted">No reports currently in the review queue.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="review-queue-slider-wrap" class="review-queue-slider d-none mt-2">
+        <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+          <span>Slide to see more columns</span>
+          <span id="review-queue-slider-position">Start</span>
+        </div>
+        <input type="range" class="form-range" id="review-queue-slider" min="0" max="0" step="1" value="0" aria-label="Scroll the review queue table horizontally">
+      </div>
+      <div class="d-flex justify-content-end mt-3">
+        <nav id="review-queue-pagination" aria-label="Review queue pagination"></nav>
+      </div>
     </div>
+  </div>
   </div>
 
   <div class="col-12 col-xl-6">
@@ -393,138 +435,50 @@
 </div>
 {% endif %}
 
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div>
-        <h4 class="card-title mb-0">Review Queue</h4>
-        <span class="text-muted small">Submitted, validated, in review, and returned reports</span>
-      </div>
-      <form method="post" action="{{ url_for('approve_all_review_queue') }}" class="d-flex gap-2 align-items-start" onsubmit="return confirm('Approve all reports currently in the review queue?');">
-        <input type="text" class="form-control form-control-sm" name="review_notes" placeholder="Optional approval note">
-        <button type="submit" class="btn btn-success btn-sm">Approve All</button>
-      </form>
-    </div>
-    <div class="row g-2 align-items-end mb-3" id="review-queue-controls">
-      <div class="col-12 col-md-6 col-lg-5">
-        <label for="review-queue-search" class="form-label form-label-sm mb-1">Search queue</label>
-        <input
-          type="search"
-          id="review-queue-search"
-          class="form-control form-control-sm"
-          placeholder="Search by report ID, PBO, owner, workflow, review status"
-          autocomplete="off"
-        >
-      </div>
-      <div class="col-12 col-md-3 col-lg-2">
-        <label class="form-label form-label-sm mb-1 d-block">Show</label>
-        <div id="review-queue-per-page" class="btn-group btn-group-sm w-100" role="group" aria-label="Rows per page">
-          <button type="button" class="btn btn-primary" data-per-page="10" aria-pressed="true">10</button>
-          <button type="button" class="btn btn-outline-primary" data-per-page="25" aria-pressed="false">25</button>
-          <button type="button" class="btn btn-outline-primary" data-per-page="50" aria-pressed="false">50</button>
-        </div>
-      </div>
-      <div class="col-12 col-md-3 col-lg-5 d-flex justify-content-md-end">
-        <div class="small text-muted mt-2 mt-md-0" id="review-queue-count"></div>
-      </div>
-    </div>
-    <div class="table-responsive">
-      <table id="review-queue-table" class="table table-sm align-middle">
-        <thead>
-          <tr>
-            <th>Report</th>
-            <th>Owner</th>
-            <th>Workflow</th>
-            <th>Review</th>
-            <th>Files</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for report in workflow_reports %}
-          <tr data-review-row="1">
-            <td>
-              <a href="{{ url_for('report_detail', report_id=report.id) }}">#{{ report.id }}</a>
-              <div>{{ report.pbo_name or 'Unnamed PBO' }}</div>
-              {% if report.duplicate_flag %}
-              <div class="text-danger small">Duplicate flag active</div>
-              <div class="text-danger small">
-                {{ (report.pbo_name or ('Report #' ~ report.id)) ~ '__' ~ (report.reporting_period_start|format_date if report.reporting_period_start else 'NO_START_DATE') }}
-              </div>
-              {% endif %}
-            </td>
-            <td>{{ report.owner_display }}</td>
-            <td>{{ report.workflow_status }}</td>
-            <td>
-              <div>{{ report.review_status }}</div>
-              {% if report.reviewed_by %}
-              <small class="text-muted">By {{ report.reviewed_by.email }}</small>
-              {% endif %}
-            </td>
-            <td>
-              <div class="small">{{ report.uploaded_files|length }} file(s)</div>
-              <form method="post" action="{{ url_for('upload_report_file', report_id=report.id) }}" enctype="multipart/form-data" class="mt-2">
-                <input type="hidden" name="category" value="supporting_document">
-                <input type="file" class="form-control form-control-sm mb-2" name="file" required>
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Upload</button>
-              </form>
-            </td>
-            <td style="min-width: 280px;">
-              <form method="post" action="{{ url_for('update_report_workflow', report_id=report.id) }}">
-                <div class="mb-2">
-                  <select class="form-select form-select-sm" name="workflow_action">
-                    <option value="validate">Validate</option>
-                    <option value="start_review">Start Review</option>
-                    <option value="approve">Approve</option>
-                    <option value="return">Return</option>
-                    <option value="submit">Resubmit</option>
-                  </select>
-                </div>
-                <div class="mb-2">
-                  <textarea class="form-control form-control-sm" name="review_notes" rows="2" placeholder="Review notes"></textarea>
-                </div>
-                <div class="mb-2">
-                  <input class="form-control form-control-sm" name="return_reason" placeholder="Return reason (if returning)">
-                </div>
-                <button type="submit" class="btn btn-primary btn-sm">Update</button>
-              </form>
-            </td>
-          </tr>
-          {% else %}
-          <tr><td colspan="6" class="text-muted">No reports currently in the review queue.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="d-flex justify-content-end mt-3">
-      <nav id="review-queue-pagination" aria-label="Review queue pagination"></nav>
-    </div>
-  </div>
-</div>
-
 <div class="row g-4 mb-4">
   <div class="col-12 col-xl-6">
     <div class="card shadow-sm h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h4 class="card-title mb-0">User Activity</h4>
-          <a href="{{ url_for('admin_user_activity_export', activity_date=user_activity_filters.activity_date or None) }}" class="btn btn-outline-success btn-sm">
+          <div>
+            <h4 class="card-title mb-0">User Activity</h4>
+            {% if user_activity_filters.activity_label %}
+            <span class="text-muted small">Showing activity {{ user_activity_filters.activity_label }}</span>
+            {% else %}
+            <span class="text-muted small">Showing all recorded activity</span>
+            {% endif %}
+          </div>
+          <a href="{{ url_for('admin_user_activity_export', activity_from=user_activity_filters.activity_from or None, activity_to=user_activity_filters.activity_to or None) }}" class="btn btn-outline-success btn-sm">
             Download Excel
           </a>
         </div>
-        <form method="get" action="{{ url_for('admin_view') }}" class="row g-2 align-items-end mb-3">
+        <form method="get" action="{{ url_for('admin_view') }}" class="row g-2 align-items-end mb-3" id="user-activity-filter-form">
           <input type="hidden" name="action" value="{{ audit_filters.action }}">
           <input type="hidden" name="user_id" value="{{ audit_filters.user_id or '' }}">
           <input type="hidden" name="report_id" value="{{ audit_filters.report_id or '' }}">
           <input type="hidden" name="from_date" value="{{ audit_filters.from_date }}">
           <input type="hidden" name="to_date" value="{{ audit_filters.to_date }}">
-          <div class="col-12 col-md-5">
-            <label for="activity_date" class="form-label">Filter by day</label>
-            <input class="form-control" id="activity_date" name="activity_date" type="date" value="{{ user_activity_filters.activity_date }}">
+          <div class="col-6 col-md-3">
+            <label for="activity_from" class="form-label">From</label>
+            <input class="form-control" id="activity_from" name="activity_from" type="date" value="{{ user_activity_filters.activity_from }}" max="{{ user_activity_filters.activity_to or '' }}">
           </div>
-          <div class="col-12 col-md-7">
+          <div class="col-6 col-md-3">
+            <label for="activity_to" class="form-label">To</label>
+            <input class="form-control" id="activity_to" name="activity_to" type="date" value="{{ user_activity_filters.activity_to }}" min="{{ user_activity_filters.activity_from or '' }}">
+          </div>
+          <div class="col-12 col-md-6">
             <label for="activity_search" class="form-label">Search file</label>
             <input class="form-control" id="activity_search" name="activity_search" type="search" value="{{ user_activity_filters.activity_search }}" placeholder="Search by file/report ID, PBO name, registration number, or form file">
+          </div>
+          <div class="col-12">
+            <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Quick date ranges" id="user-activity-presets">
+              <button type="button" class="btn btn-outline-secondary" data-preset="today">Today</button>
+              <button type="button" class="btn btn-outline-secondary" data-preset="yesterday">Yesterday</button>
+              <button type="button" class="btn btn-outline-secondary" data-preset="7d">Last 7 days</button>
+              <button type="button" class="btn btn-outline-secondary" data-preset="30d">Last 30 days</button>
+              <button type="button" class="btn btn-outline-secondary" data-preset="month">This month</button>
+              <button type="button" class="btn btn-outline-secondary" data-preset="last-month">Last month</button>
+            </div>
           </div>
           <div class="col-6 col-md-auto">
             <button type="submit" class="btn btn-primary w-100">Apply</button>
@@ -535,7 +489,7 @@
             </a>
           </div>
         </form>
-        <div id="user-activity-panel" data-refresh-url="{{ url_for('admin_user_activity_panel', activity_date=user_activity_filters.activity_date or None, activity_search=user_activity_filters.activity_search or None) }}">
+        <div id="user-activity-panel" data-refresh-url="{{ url_for('admin_user_activity_panel', activity_from=user_activity_filters.activity_from or None, activity_to=user_activity_filters.activity_to or None, activity_search=user_activity_filters.activity_search or None) }}">
           {% include '_admin_user_activity_table.html' %}
         </div>
       </div>
@@ -596,7 +550,8 @@
       <a class="btn btn-outline-success btn-sm" href="{{ url_for('export_audit_logs', action=audit_filters.action, user_id=audit_filters.user_id, report_id=audit_filters.report_id, from_date=audit_filters.from_date, to_date=audit_filters.to_date) }}">Export CSV</a>
     </div>
     <form method="get" action="{{ url_for('admin_view') }}" class="row g-2 mb-3">
-      <input type="hidden" name="activity_date" value="{{ user_activity_filters.activity_date }}">
+      <input type="hidden" name="activity_from" value="{{ user_activity_filters.activity_from }}">
+      <input type="hidden" name="activity_to" value="{{ user_activity_filters.activity_to }}">
       <input type="hidden" name="activity_search" value="{{ user_activity_filters.activity_search }}">
       <div class="col-12 col-md-3">
         <select class="form-select" name="action">
@@ -1272,6 +1227,145 @@
 
     render();
   })();
+
+  (function () {
+    const scroller = document.getElementById('review-queue-scroll');
+    const table = document.getElementById('review-queue-table');
+    const slider = document.getElementById('review-queue-slider');
+    const wrap = document.getElementById('review-queue-slider-wrap');
+    const positionEl = document.getElementById('review-queue-slider-position');
+    if (!scroller || !table || !slider || !wrap) return;
+
+    let syncingFromSlider = false;
+
+    function describePosition(value, max) {
+      if (max <= 0) return '';
+      if (value <= 0) return 'Start';
+      if (value >= max) return 'End';
+      return `${Math.round((value / max) * 100)}%`;
+    }
+
+    function updateBounds() {
+      const max = Math.max(0, Math.round(scroller.scrollWidth - scroller.clientWidth));
+      slider.max = String(max);
+      const current = Math.min(Math.round(scroller.scrollLeft), max);
+      slider.value = String(current);
+      wrap.classList.toggle('d-none', max <= 0);
+      if (positionEl) positionEl.textContent = describePosition(current, max);
+    }
+
+    slider.addEventListener('input', () => {
+      syncingFromSlider = true;
+      scroller.scrollLeft = Number(slider.value) || 0;
+      if (positionEl) positionEl.textContent = describePosition(Number(slider.value) || 0, Number(slider.max) || 0);
+      window.requestAnimationFrame(() => { syncingFromSlider = false; });
+    });
+
+    scroller.addEventListener('scroll', () => {
+      if (syncingFromSlider) return;
+      const max = Number(slider.max) || 0;
+      const current = Math.min(Math.round(scroller.scrollLeft), max);
+      slider.value = String(current);
+      if (positionEl) positionEl.textContent = describePosition(current, max);
+    }, { passive: true });
+
+    window.addEventListener('resize', updateBounds);
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(updateBounds);
+      observer.observe(scroller);
+      observer.observe(table);
+    }
+    updateBounds();
+  })();
+
+  (function () {
+    const form = document.getElementById('user-activity-filter-form');
+    const presets = document.getElementById('user-activity-presets');
+    const fromInput = document.getElementById('activity_from');
+    const toInput = document.getElementById('activity_to');
+    if (!form || !presets || !fromInput || !toInput) return;
+
+    const toIsoDate = (value) => {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const rangeForPreset = (preset) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(today);
+      const end = new Date(today);
+      switch (preset) {
+        case 'yesterday':
+          start.setDate(start.getDate() - 1);
+          end.setDate(end.getDate() - 1);
+          break;
+        case '7d':
+          start.setDate(start.getDate() - 6);
+          break;
+        case '30d':
+          start.setDate(start.getDate() - 29);
+          break;
+        case 'month':
+          start.setDate(1);
+          break;
+        case 'last-month':
+          start.setMonth(start.getMonth() - 1, 1);
+          end.setDate(0);
+          break;
+        case 'today':
+        default:
+          break;
+      }
+      return [toIsoDate(start), toIsoDate(end)];
+    };
+
+    presets.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-preset]');
+      if (!button) return;
+      const [from, to] = rangeForPreset(button.dataset.preset);
+      fromInput.value = from;
+      toInput.value = to;
+      syncBounds();
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
+
+    function syncBounds() {
+      toInput.min = fromInput.value || '';
+      fromInput.max = toInput.value || '';
+    }
+
+    fromInput.addEventListener('change', () => {
+      if (toInput.value && fromInput.value && fromInput.value > toInput.value) {
+        toInput.value = fromInput.value;
+      }
+      syncBounds();
+    });
+    toInput.addEventListener('change', () => {
+      if (fromInput.value && toInput.value && toInput.value < fromInput.value) {
+        fromInput.value = toInput.value;
+      }
+      syncBounds();
+    });
+    syncBounds();
+  })();
 </script>
+<style>
+  .review-queue-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .review-queue-table {
+    min-width: 960px;
+  }
+  .review-queue-slider .form-range {
+    cursor: grab;
+  }
+  .review-queue-slider .form-range:active {
+    cursor: grabbing;
+  }
+</style>
 </div>
 {% endblock %}

@@ -30,7 +30,7 @@
       {% else %}
       <tr>
         <td colspan="4" class="text-muted">
-          No files found for "{{ activity_search_query }}"{% if selected_activity_date %} on {{ selected_activity_date }}{% endif %}.
+          No files found for "{{ activity_search_query }}"{% if selected_activity_range %} for {{ selected_activity_range }}{% endif %}.
         </td>
       </tr>
       {% endif %}
@@ -86,8 +86,8 @@
       {% else %}
       <tr>
         <td colspan="5" class="text-muted">
-          {% if selected_activity_date %}
-          No user activity found for {{ selected_activity_date }}.
+          {% if selected_activity_range %}
+          No user activity found for {{ selected_activity_range }}.
           {% else %}
           No user activity found.
           {% endif %}

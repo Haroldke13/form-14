@@ -31,6 +31,7 @@ instance/
 db_bootstrap/
 
 # Generated/private data exports
+PASSWDS.*
 sectorreportDATA/
 static/extracted_xls/
 form14_data_analysis_*questions.json
@@ -45,3 +46,5 @@ contacts
 # Editor and OS artifacts
 .~lock.*
 .DS_Store
+
+PASSWDS.TXT

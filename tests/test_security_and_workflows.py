@@ -219,7 +219,7 @@ def test_admin_user_activity_can_filter_and_export_by_day(app, client, models):
     worksheet = workbook["User Activity"]
     rows = list(worksheet.iter_rows(values_only=True))
 
-    assert rows[0][0] == "Activity Date"
+    assert rows[0][0] == "Activity Period"
     assert rows[1][0] == "2026-03-20"
     assert rows[1][1] == "match-user@example.com"
     assert len(rows) == 2

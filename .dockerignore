@@ -1,0 +1,13 @@
+# Keep Git history and password exports out of the image.
+.git
+PASSWDS.*
+
+# Local development and generated caches.
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.DS_Store
+**/.~lock.*
+run_local.sh

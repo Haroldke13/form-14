@@ -16,7 +16,7 @@ Current deployment values:
 - Flask/Gunicorn port: `8000`
 - Standard app login password for all seeded/imported users: `field.12345`
 - Superadmin login: `joel@returnsform14.org` / `field.12345`
-- GitHub repository: `https://github.com/Haroldke13/pbora_form13.git`
+- GitHub repository: `https://github.com/Haroldke13/form-14.git`
 
 ## 1. Push This Folder To GitHub
 
@@ -26,18 +26,18 @@ Run Git from this folder only:
 cd /home/harold-coder/Downloads/form14-main__/PBORA_FORM_13
 git init
 git branch -M main
-git remote add origin https://github.com/Haroldke13/pbora_form13.git
+git remote add origin https://github.com/Haroldke13/form-14.git
 git add -A
 git commit -m "Deploy PBORA Form 13 LAN PostgreSQL package"
 git push -u origin main
 ```
 
-Do not add a `.gitignore` or `.dockerignore` for this package. The deployment bundle is intended to include every file in `PBORA_FORM_13`.
+Keep `.gitignore` and `.dockerignore` in the deployment package. Password exports must stay out of commits and Docker images. Do not add local credentials, database snapshots, or runtime data to new commits. Configure `.env.production` on the server and retain the existing persistent data mounts.
 
 If `origin` already exists, update it:
 
 ```bash
-git remote set-url origin https://github.com/Haroldke13/pbora_form13.git
+git remote set-url origin https://github.com/Haroldke13/form-14.git
 ```
 
 ## 2. Configure Ubuntu Static Network
@@ -179,7 +179,7 @@ PGPASSWORD=pbora psql -h 127.0.0.1 -p 5432 -U pbora -d pbora -c "select current_
 
 ```bash
 cd /opt
-sudo git clone https://github.com/Haroldke13/pbora_form13.git pbora-form-13
+sudo git clone https://github.com/Haroldke13/form-14.git pbora-form-13
 sudo chown -R "$USER:$USER" /opt/pbora-form-13
 cd /opt/pbora-form-13
 ```

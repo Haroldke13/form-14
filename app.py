@@ -10,6 +10,7 @@ import hashlib
 import html
 import io
 import ipaddress
+import socket
 import json
 import math
 import random
@@ -808,9 +809,58 @@ def is_production_environment():
     )
 
 
+DOCKER_HOST_ALIASES = frozenset({'host.docker.internal', 'host-gateway'})
+
+
+def resolve_docker_host_alias_for_local_run(database_url):
+    """Map Docker-only host aliases to loopback when they do not resolve here.
+
+    ``host.docker.internal`` (Docker Desktop) and ``host-gateway`` only resolve
+    inside a container. When the same ``.env`` is used for a plain ``flask run``
+    on the host, the name lookup fails and every database query raises a 500.
+    In that case the database is on this machine, so loopback is the correct
+    target. Inside Docker the alias resolves and the URL is left untouched.
+    """
+    raw_value = str(database_url or '').strip()
+    if not raw_value or database_url_is_sqlite(raw_value):
+        return database_url
+
+    parsed = urlparse(raw_value)
+    host = (parsed.hostname or '').lower()
+    if host not in DOCKER_HOST_ALIASES:
+        return database_url
+
+    try:
+        socket.gethostbyname(host)
+        return database_url
+    except (socket.gaierror, OSError):
+        pass
+
+    netloc = parsed.netloc
+    at_index = netloc.rfind('@')
+    auth_part = netloc[:at_index + 1] if at_index >= 0 else ''
+    port_suffix = f':{parsed.port}' if parsed.port else ''
+    rewritten = urlunparse((
+        parsed.scheme,
+        f'{auth_part}127.0.0.1{port_suffix}',
+        parsed.path,
+        parsed.params,
+        parsed.query,
+        parsed.fragment,
+    ))
+    print(
+        f"[startup] database host '{host}' does not resolve outside Docker; "
+        f"using {redact_database_url(rewritten)} for this local run.",
+        flush=True,
+    )
+    return rewritten
+
+
 def resolve_primary_database_url():
     configured_url = env_first('INTERNAL_DATABASE_URL')
-    return normalize_database_url(configured_url or build_database_url_from_env_parts())
+    return normalize_database_url(
+        resolve_docker_host_alias_for_local_run(configured_url or build_database_url_from_env_parts())
+    )
 
 
 def resolve_backup_database_url():
@@ -13069,14 +13119,62 @@ def admin_create():
         return redirect(url_for('admin_view'))
     return render_template('admin_create.html')
 
-# Admin view route
-def build_admin_user_activity_rows(users, activity_date=None):
+ADMIN_ACTIVITY_RANGE_FLOOR = date(1970, 1, 1)
+
+
+def resolve_admin_activity_date_range(args=None):
+    """Read the User Activity date-range filter from the request.
+
+    Accepts ``activity_from`` and ``activity_to`` (either may be blank). The legacy
+    single-day ``activity_date`` parameter is still honoured so old links and
+    bookmarks keep working. An open-ended range is closed automatically: a missing
+    ``to`` defaults to today and a missing ``from`` defaults to a far-past floor, so
+    every downstream index builder always receives a complete window.
+    """
+    args = request.args if args is None else args
+    legacy_date = parse_date(args.get('activity_date'))
+    from_date = parse_date(args.get('activity_from')) or legacy_date
+    to_date = parse_date(args.get('activity_to')) or legacy_date
+    if from_date and to_date and from_date > to_date:
+        from_date, to_date = to_date, from_date
+
+    is_active = bool(from_date or to_date)
     activity_start = None
     activity_end = None
-    if activity_date:
-        activity_start = datetime.combine(activity_date, datetime.min.time())
-        activity_end = datetime.combine(activity_date, datetime.max.time())
+    if is_active:
+        effective_from = from_date or ADMIN_ACTIVITY_RANGE_FLOOR
+        effective_to = to_date or utc_now().date()
+        activity_start = datetime.combine(effective_from, datetime.min.time())
+        activity_end = datetime.combine(effective_to, datetime.max.time())
 
+    if from_date and to_date:
+        label = from_date.isoformat() if from_date == to_date else f'{from_date.isoformat()} to {to_date.isoformat()}'
+        slug = from_date.strftime('%Y%m%d') if from_date == to_date else f'{from_date.strftime("%Y%m%d")}_{to_date.strftime("%Y%m%d")}'
+    elif from_date:
+        label = f'from {from_date.isoformat()}'
+        slug = f'from_{from_date.strftime("%Y%m%d")}'
+    elif to_date:
+        label = f'up to {to_date.isoformat()}'
+        slug = f'to_{to_date.strftime("%Y%m%d")}'
+    else:
+        label = ''
+        slug = 'all'
+
+    return {
+        'from_date': from_date,
+        'to_date': to_date,
+        'start': activity_start,
+        'end': activity_end,
+        'from_value': from_date.isoformat() if from_date else '',
+        'to_value': to_date.isoformat() if to_date else '',
+        'label': label,
+        'slug': slug,
+        'is_active': is_active,
+    }
+
+
+# Admin view route
+def build_admin_user_activity_rows(users, activity_start=None, activity_end=None):
     grouped_users = defaultdict(list)
     for user in users:
         if user is None:
@@ -13254,16 +13352,10 @@ def build_admin_user_activity_rows(users, activity_date=None):
     return user_activity_rows
 
 
-def build_admin_user_activity_file_rows(search_query, activity_date=None):
+def build_admin_user_activity_file_rows(search_query, activity_start=None, activity_end=None):
     term = (search_query or '').strip()
     if not term:
         return []
-
-    activity_start = None
-    activity_end = None
-    if activity_date:
-        activity_start = datetime.combine(activity_date, datetime.min.time())
-        activity_end = datetime.combine(activity_date, datetime.max.time())
 
     pattern = f"%{term}%"
     query = (
@@ -13332,7 +13424,7 @@ def admin_view():
     audit_report_id = request.args.get('report_id', type=int)
     audit_from = parse_date(request.args.get('from_date'))
     audit_to = parse_date(request.args.get('to_date'))
-    activity_date = parse_date(request.args.get('activity_date'))
+    activity_range = resolve_admin_activity_date_range()
     activity_search = request.args.get('activity_search', '').strip()
     requested_fk_audit = request.args.get('run_fk_audit') == '1'
     run_fk_audit = requested_fk_audit and current_user_is_superadmin
@@ -13345,8 +13437,16 @@ def admin_view():
         .order_by(User.email.asc())
         .all()
     )
-    user_activity_rows = build_admin_user_activity_rows(users, activity_date=activity_date)
-    user_activity_file_rows = build_admin_user_activity_file_rows(activity_search, activity_date=activity_date)
+    user_activity_rows = build_admin_user_activity_rows(
+        users,
+        activity_start=activity_range['start'],
+        activity_end=activity_range['end'],
+    )
+    user_activity_file_rows = build_admin_user_activity_file_rows(
+        activity_search,
+        activity_start=activity_range['start'],
+        activity_end=activity_range['end'],
+    )
 
     audit_query = UserActivityLog.query.options(
         selectinload(UserActivityLog.user),
@@ -13452,9 +13552,11 @@ def admin_view():
         user_activity_rows=user_activity_rows,
         user_activity_file_rows=user_activity_file_rows,
         activity_search_query=activity_search,
-        selected_activity_date=request.args.get('activity_date', ''),
+        selected_activity_range=activity_range['label'],
         user_activity_filters={
-            'activity_date': request.args.get('activity_date', ''),
+            'activity_from': activity_range['from_value'],
+            'activity_to': activity_range['to_value'],
+            'activity_label': activity_range['label'],
             'activity_search': activity_search,
         },
         audit_logs=audit_logs,
@@ -13485,7 +13587,7 @@ def admin_view():
 @admin_required
 @login_required
 def admin_user_activity_panel():
-    activity_date = parse_date(request.args.get('activity_date'))
+    activity_range = resolve_admin_activity_date_range()
     activity_search = request.args.get('activity_search', '').strip()
     users = (
         User.query
@@ -13493,13 +13595,21 @@ def admin_user_activity_panel():
         .order_by(User.email.asc())
         .all()
     )
-    user_activity_rows = build_admin_user_activity_rows(users, activity_date=activity_date)
-    user_activity_file_rows = build_admin_user_activity_file_rows(activity_search, activity_date=activity_date)
+    user_activity_rows = build_admin_user_activity_rows(
+        users,
+        activity_start=activity_range['start'],
+        activity_end=activity_range['end'],
+    )
+    user_activity_file_rows = build_admin_user_activity_file_rows(
+        activity_search,
+        activity_start=activity_range['start'],
+        activity_end=activity_range['end'],
+    )
     return render_template(
         '_admin_user_activity_table.html',
         user_activity_rows=user_activity_rows,
         user_activity_file_rows=user_activity_file_rows,
-        selected_activity_date=request.args.get('activity_date', ''),
+        selected_activity_range=activity_range['label'],
         activity_search_query=activity_search,
     )
 
@@ -13508,20 +13618,24 @@ def admin_user_activity_panel():
 @admin_required
 @login_required
 def admin_user_activity_export():
-    activity_date = parse_date(request.args.get('activity_date'))
+    activity_range = resolve_admin_activity_date_range()
     users = (
         User.query
         .options(selectinload(User.reports), selectinload(User.activity_logs))
         .order_by(User.email.asc())
         .all()
     )
-    user_activity_rows = build_admin_user_activity_rows(users, activity_date=activity_date)
+    user_activity_rows = build_admin_user_activity_rows(
+        users,
+        activity_start=activity_range['start'],
+        activity_end=activity_range['end'],
+    )
     export_rows = []
     for row in user_activity_rows:
         user = row['user']
         last_worked_report = row.get('last_worked_report')
         export_rows.append({
-            'Activity Date': activity_date.isoformat() if activity_date else 'All Records',
+            'Activity Period': activity_range['label'] or 'All Records',
             'User Name': row.get('display_email') or user.email or f'User #{user.id}',
             'Full Name': row.get('display_full_name') or user.full_name or '',
             'Department': user.department or '',
@@ -13548,11 +13662,7 @@ def admin_user_activity_export():
 
     buffer.seek(0)
     timestamp = utc_now().strftime('%Y%m%d_%H%M%S')
-    filename_prefix = (
-        f'user_activity_{activity_date.strftime("%Y%m%d")}'
-        if activity_date else
-        'user_activity_all'
-    )
+    filename_prefix = f'user_activity_{activity_range["slug"]}'
     return send_file(
         buffer,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -13961,9 +14071,9 @@ def admin_data_analysis_result(token):
 
 def admin_backup_database():
     if start_application_backup(triggered_by='admin'):
-        flash('Database backup started. Progress will update below.', 'success')
+        flash('Database backup started in the background and will upload to Google Drive when complete.', 'success')
     else:
-        flash('A database backup is already running. Watch the progress panel below.', 'warning')
+        flash('A database backup is already running in the background. Please wait for it to finish before starting another.', 'warning')
     return redirect(url_for('admin_view'))
 
 
