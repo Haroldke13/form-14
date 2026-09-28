@@ -13614,6 +13614,51 @@ def admin_user_activity_panel():
     )
 
 
+def build_added_organization_export(activity_range):
+    """Export reports created in the window, including repeated form data as JSON."""
+    related_models = set(get_report_merge_related_models()) | {UploadedFile}
+    relationships = [
+        relation for relation in inspect(PBOReport).relationships
+        if relation.uselist and relation.mapper.class_ in related_models
+    ]
+    query = PBOReport.query.options(*[
+        selectinload(getattr(PBOReport, relation.key)) for relation in relationships
+    ])
+    if activity_range['start'] is not None:
+        query = query.filter(PBOReport.created_at >= activity_range['start'])
+    if activity_range['end'] is not None:
+        query = query.filter(PBOReport.created_at <= activity_range['end'])
+
+    columns = [column.name for column in PBOReport.__table__.columns]
+    columns += [f'{relation.key}_json' for relation in relationships]
+    rows = []
+    for report in query.order_by(PBOReport.created_at.asc(), PBOReport.id.asc()).all():
+        row = {column.name: getattr(report, column.name) for column in PBOReport.__table__.columns}
+        for relation in relationships:
+            records = sorted(getattr(report, relation.key), key=lambda record: record.id or 0)
+            row[f'{relation.key}_json'] = json.dumps([
+                {column.name: getattr(record, column.name) for column in relation.mapper.class_.__table__.columns}
+                for record in records
+            ], ensure_ascii=False, default=lambda value: value.isoformat() if isinstance(value, (date, datetime)) else str(value))
+        for name, value in list(row.items()):
+            if isinstance(value, (date, datetime)):
+                row[name] = value.isoformat()
+            elif isinstance(value, (dict, list)):
+                row[name] = json.dumps(value, ensure_ascii=False, default=str)
+            # Excel silently truncates strings above 32,767 characters. Preserve
+            # the complete value in ordered continuation columns instead.
+            value = row[name]
+            if isinstance(value, str) and len(value) > 32767:
+                row[name] = value[:32767]
+                for offset in range(32767, len(value), 32767):
+                    part_name = f'{name}__part_{offset // 32767 + 1}'
+                    if part_name not in columns:
+                        columns.append(part_name)
+                    row[part_name] = value[offset:offset + 32767]
+        rows.append(row)
+    return columns, rows
+
+
 @app.route('/admin/user-activity/export')
 @admin_required
 @login_required
@@ -13651,14 +13696,22 @@ def admin_user_activity_export():
 
     pandas_module = get_pandas()
     dataframe = pandas_module.DataFrame(export_rows)
+    organization_columns, organization_rows = build_added_organization_export(activity_range)
+    organizations = pandas_module.DataFrame(organization_rows, columns=organization_columns, dtype=object)
     buffer = io.BytesIO()
     with pandas_module.ExcelWriter(buffer, engine='openpyxl') as writer:
         dataframe.to_excel(writer, index=False, sheet_name='User Activity')
-        worksheet = writer.sheets['User Activity']
-        for column_cells in worksheet.columns:
-            column_letter = column_cells[0].column_letter
-            max_length = max(len(str(cell.value or '')) for cell in column_cells)
-            worksheet.column_dimensions[column_letter].width = min(max(max_length + 2, 14), 40)
+        organizations.to_excel(writer, index=False, sheet_name='Organizations Added')
+        for worksheet in writer.sheets.values():
+            worksheet.freeze_panes = 'A2'
+            worksheet.auto_filter.ref = worksheet.dimensions
+            for column_cells in worksheet.columns:
+                column_letter = column_cells[0].column_letter
+                max_length = max(len(str(cell.value or '')) for cell in column_cells)
+                worksheet.column_dimensions[column_letter].width = min(max(max_length + 2, 14), 40)
+                for cell in column_cells:
+                    if isinstance(cell.value, str):
+                        cell.data_type = 's'
 
     buffer.seek(0)
     timestamp = utc_now().strftime('%Y%m%d_%H%M%S')

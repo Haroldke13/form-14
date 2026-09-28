@@ -1,4 +1,5 @@
 import io
+import json
 from datetime import date, datetime
 
 from openpyxl import load_workbook
@@ -119,6 +120,88 @@ def test_admin_user_activity_export_uses_range_label_and_slug(app, client, model
     assert rows[1][0] == "2026-03-05 to 2026-03-15"
     assert rows[1][1] == "mid-user@example.com"
     assert len(rows) == 2
+
+    organizations = load_workbook(io.BytesIO(response.data))["Organizations Added"]
+    organization_rows = list(organizations.iter_rows(values_only=True))
+    headers = organization_rows[0]
+    assert len(organization_rows) == 2
+    assert organization_rows[1][headers.index("pbo_name")] == "MID REPORT"
+    assert {column.name for column in models["PBOReport"].__table__.columns} <= set(headers)
+
+
+def test_organizations_export_preserves_boundaries_json_and_long_values(app, client, models):
+    from models import Asset, Donation
+
+    _seed_activity(app, models)
+    db = models["db"]
+    Report = models["PBOReport"]
+    raw_json = json.dumps({"entered": ["Nairobi", "München"], "amount": 0}, ensure_ascii=False)
+    signature = "x" * 40000
+    with app.app_context():
+        middle = Report.query.filter_by(pbo_name="MID REPORT").one()
+        middle.imputed_fields = raw_json
+        middle.signature = signature
+        middle.contact_name = "=1+1"
+        middle.income_b2_total = 0
+        db.session.add(Donation(report_id=middle.id, name="München donor", amount=123.5))
+        db.session.add_all([Asset(report_id=middle.id, item="x" * 1000, number=i, value=0) for i in range(35)])
+        early = Report.query.filter_by(pbo_name="EARLY REPORT").one()
+        early.updated_at = datetime(2026, 3, 10, 12)
+        for name, created in [
+            ("Range Start", datetime(2026, 3, 5)),
+            ("Range End", datetime(2026, 3, 15, 23, 59, 59, 999999)),
+            ("Before Range", datetime(2026, 3, 4, 23, 59, 59, 999999)),
+            ("After Range", datetime(2026, 3, 16)),
+        ]:
+            db.session.add(Report(pbo_name=name, created_at=created))
+        db.session.commit()
+        db.session.execute(Report.__table__.update().where(Report.id == middle.id).values(imputed_fields=raw_json))
+        db.session.commit()
+        count_before = Report.query.count()
+
+    login(client, "range-admin@example.com", "RangeAdmin@123")
+    response = client.get("/admin/user-activity/export?activity_from=2026-03-05&activity_to=2026-03-15")
+    assert response.status_code == 200
+    workbook = load_workbook(io.BytesIO(response.data))
+    assert workbook.sheetnames == ["User Activity", "Organizations Added"]
+    worksheet = workbook["Organizations Added"]
+    values = list(worksheet.iter_rows(values_only=True))
+    headers = values[0]
+    rows = [dict(zip(headers, row)) for row in values[1:]]
+    assert [row["pbo_name"] for row in rows] == ["RANGE START", "MID REPORT", "RANGE END"]
+    middle = rows[1]
+    assert middle["imputed_fields"] == raw_json
+    assert middle["signature"] + middle["signature__part_2"] == signature
+    assert middle["income_b2_total"] == 0
+    assert middle["return_date"] == "9999-09-09"
+    assert json.loads(middle["donations_json"])[0]["name"] == "MÜNCHEN DONOR"
+    assert json.loads(middle["donations_json"])[0]["amount"] == 123.5
+    assets = json.loads(middle["assets_json"] + middle["assets_json__part_2"])
+    assert len(assets) == 35 and assets[-1]["number"] == 34
+    assert json.loads(middle["bank_accounts_json"]) == []
+    assert worksheet.cell(3, headers.index("contact_name") + 1).value == "=1+1"
+    assert worksheet.cell(3, headers.index("contact_name") + 1).data_type == "s"
+    with app.app_context():
+        assert Report.query.count() == count_before
+        assert Report.query.filter_by(pbo_name="MID REPORT").one().signature == signature
+
+
+def test_organizations_export_empty_unfiltered_and_legacy_ranges(app, client, models):
+    _seed_activity(app, models)
+    login(client, "range-admin@example.com", "RangeAdmin@123")
+    for query, expected in [
+        ("?activity_from=2026-04-01&activity_to=2026-04-30", []),
+        ("", ["Early Report", "Mid Report", "Late Report"]),
+        ("?activity_date=2026-03-10", ["Mid Report"]),
+        ("?activity_to=2026-03-10", ["Early Report", "Mid Report"]),
+        ("?activity_from=2026-03-20", ["Late Report"]),
+    ]:
+        response = client.get("/admin/user-activity/export" + query)
+        assert response.status_code == 200
+        worksheet = load_workbook(io.BytesIO(response.data))["Organizations Added"]
+        rows = list(worksheet.iter_rows(values_only=True))
+        assert "pbo_name" in rows[0] and "donations_json" in rows[0]
+        assert [row[rows[0].index("pbo_name")] for row in rows[1:]] == [name.upper() for name in expected]
 
 
 def test_admin_dashboard_layout_after_review_queue_move(app, client, models):
