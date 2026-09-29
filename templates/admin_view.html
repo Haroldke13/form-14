@@ -500,8 +500,97 @@
     <div class="card shadow-sm h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h4 class="card-title mb-0">Recent Files</h4>
+          <div>
+            <h4 class="card-title mb-0">Recent Files</h4>
+            {% if recent_files_filters.files_label %}
+            <span class="text-muted small">Financial year {{ recent_files_filters.files_label }}</span>
+            {% else %}
+            <span class="text-muted small">Showing all reporting periods</span>
+            {% endif %}
+          </div>
+          <a class="btn btn-outline-success btn-sm"
+             href="{{ url_for('admin_recent_files_export', files_start=recent_files_filters.files_start or None, files_period=recent_files_filters.files_period or None, files_year=recent_files_filters.files_year or None, files_search=recent_files_filters.files_search or None) }}">
+            Download Excel
+          </a>
         </div>
+        {# "Starting on" fixes the first day; the year always runs twelve months
+           from there, so Jan-Dec and Jul-Jun years both work without asking for
+           an end date. The backend derives it — see
+           resolve_recent_files_financial_year(). #}
+        <form method="get" action="{{ url_for('admin_view') }}" class="row g-2 align-items-end mb-3" id="recent-files-filter-form">
+          <input type="hidden" name="activity_from" value="{{ user_activity_filters.activity_from }}">
+          <input type="hidden" name="activity_to" value="{{ user_activity_filters.activity_to }}">
+          <input type="hidden" name="activity_search" value="{{ user_activity_filters.activity_search }}">
+          <input type="hidden" name="action" value="{{ audit_filters.action }}">
+          <input type="hidden" name="user_id" value="{{ audit_filters.user_id or '' }}">
+          <input type="hidden" name="report_id" value="{{ audit_filters.report_id or '' }}">
+          <div class="col-12 col-md-6">
+            <label for="files_period" class="form-label">Financial period</label>
+            <select class="form-select" id="files_period" name="files_period">
+              <option value="">All financial periods</option>
+              {% for option in financial_period_options %}
+              <option value="{{ option.value }}" {% if recent_files_filters.files_period == option.value %}selected{% endif %}>
+                {{ option.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="files_year" class="form-label">Financial year</label>
+            <select class="form-select" id="files_year" name="files_year">
+              <option value="">All financial years</option>
+              {% for year in financial_year_options %}
+              <option value="{{ year }}" {% if recent_files_filters.files_year == year %}selected{% endif %}>
+                {{ year }}{% if recent_files_filters.files_period and recent_files_filters.files_period != 1 %}/{{ '%02d' % ((year + 1) % 100) }}{% endif %}
+              </option>
+              {% else %}
+              <option value="" disabled>No reporting periods recorded yet</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-5">
+            <label for="files_start" class="form-label">Starting on</label>
+            <input class="form-control" id="files_start" name="files_start" type="date"
+                   value="{{ recent_files_filters.files_start }}"
+                   aria-describedby="files-start-help">
+            <div class="form-text" id="files-start-help">
+              {% if recent_files_filters.files_end %}
+              Twelve months to {{ recent_files_filters.files_end }}.
+              {% else %}
+              Optional &mdash; only for a year that does not start on the 1st. Overrides the dropdowns.
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-12 col-md-7">
+            <label for="files_search" class="form-label">Search file</label>
+            <input class="form-control" id="files_search" name="files_search" type="search"
+                   value="{{ recent_files_filters.files_search }}"
+                   placeholder="Search by file/report ID, PBO name, or registration number">
+          </div>
+          <div class="col-12">
+            <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Financial year presets" id="recent-files-presets">
+              <button type="button" class="btn btn-outline-secondary" data-fy-period="1">Jan-Dec</button>
+              <button type="button" class="btn btn-outline-secondary" data-fy-period="7">Jul-Jun</button>
+              <button type="button" class="btn btn-outline-secondary" data-fy-offset="-1">Previous year</button>
+              <button type="button" class="btn btn-outline-secondary" data-fy-offset="1">Next year</button>
+            </div>
+          </div>
+          <div class="col-6 col-md-auto">
+            <button type="submit" class="btn btn-primary w-100">Apply</button>
+          </div>
+          <div class="col-6 col-md-auto">
+            <a class="btn btn-outline-secondary w-100"
+               href="{{ url_for('admin_view', activity_from=user_activity_filters.activity_from or None, activity_to=user_activity_filters.activity_to or None, activity_search=user_activity_filters.activity_search or None, action=audit_filters.action or None, user_id=audit_filters.user_id or None, report_id=audit_filters.report_id or None) }}">
+              All Records
+            </a>
+          </div>
+        </form>
+        {% if recent_files_filters.total > recent_files_filters.shown %}
+        <p class="text-muted small mb-2">
+          Showing {{ recent_files_filters.shown }} of {{ recent_files_filters.total }} matching files &mdash;
+          download the Excel for the full list.
+        </p>
+        {% endif %}
         <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
           <table class="table table-sm align-middle mb-0">
             <thead>
@@ -532,7 +621,13 @@
               </tr>
               {% else %}
               <tr>
-                <td colspan="2" class="text-muted">No recent report files available.</td>
+                <td colspan="2" class="text-muted">
+                  {% if recent_files_filters.is_active %}
+                  No files matched this financial year or search.
+                  {% else %}
+                  No recent report files available.
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -1350,6 +1445,53 @@
       syncBounds();
     });
     syncBounds();
+  })();
+
+  // Recent Files financial-year presets.
+  //
+  // These drive the two dropdowns, not the "Starting on" date, because that
+  // date overrides them server-side. Each preset clears it for the same reason.
+  //
+  // Previous/Next step through the years the dropdown actually offers — the
+  // ones present in the data — so you walk 24/25 -> 25/26 without landing on
+  // an empty year.
+  (function () {
+    const form = document.getElementById('recent-files-filter-form');
+    const presets = document.getElementById('recent-files-presets');
+    const startInput = document.getElementById('files_start');
+    const periodSelect = document.getElementById('files_period');
+    const yearSelect = document.getElementById('files_year');
+    if (!form || !presets || !periodSelect || !yearSelect) return;
+
+    const yearValues = Array.from(yearSelect.options)
+      .map((option) => Number(option.value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => b - a);
+
+    presets.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-fy-period], [data-fy-offset]');
+      if (!button) return;
+
+      if (button.dataset.fyPeriod) {
+        periodSelect.value = button.dataset.fyPeriod;
+        // Default to the newest year on offer if none is chosen yet.
+        if (!yearSelect.value && yearValues.length) {
+          yearSelect.value = String(yearValues[0]);
+        }
+      } else {
+        if (!yearValues.length) return;
+        const offset = Number(button.dataset.fyOffset);
+        const current = Number(yearSelect.value);
+        const index = yearValues.indexOf(current);
+        // yearValues is newest-first, so "previous year" moves later in it.
+        const nextIndex = index === -1 ? 0 : index - offset;
+        if (nextIndex < 0 || nextIndex >= yearValues.length) return;
+        yearSelect.value = String(yearValues[nextIndex]);
+      }
+
+      if (startInput) startInput.value = '';
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
   })();
 </script>
 <style>

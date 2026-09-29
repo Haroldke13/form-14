@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 
 from flask import Flask, Response, render_template, request, redirect, session, url_for, flash, jsonify, send_file, abort, make_response
 
-from sqlalchemy import MetaData, Table, String, Text, bindparam, cast, create_engine, func, inspect, literal_column, or_, select, text
+from sqlalchemy import MetaData, Table, String, Text, bindparam, cast, create_engine, extract, func, inspect, literal_column, or_, select, text
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -13203,6 +13203,172 @@ def resolve_admin_activity_date_range(args=None):
     }
 
 
+RECENT_FILES_SEARCH_COLUMNS = (
+    'pbo_name',
+    'pbo_registration_number',
+    'registration_number',
+)
+
+MONTH_NAMES = (
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+)
+
+
+def financial_period_choices():
+    """The twelve financial periods, named by the months they run between.
+
+    A financial year can start in any month, so there are exactly twelve of
+    them: January-December, February-January, ... December-November. The value
+    is the starting month number, which is all the window maths needs.
+    """
+    return [
+        {'value': month, 'label': f'{MONTH_NAMES[month - 1]} - {MONTH_NAMES[month - 2]}'}
+        for month in range(1, 13)
+    ]
+
+
+def available_financial_years():
+    """Calendar years that actually have reports, newest first.
+
+    Read from the data rather than hard-coded, so the year dropdown never
+    offers an empty year or omits one that exists.
+    """
+    rows = (
+        db.session.query(extract('year', PBOReport.reporting_period_start))
+        .filter(PBOReport.reporting_period_start.isnot(None))
+        .distinct()
+        .all()
+    )
+    years = {int(value) for (value,) in rows if value is not None}
+    return sorted(years, reverse=True)
+
+
+def add_months(value, months):
+    """Shift a date by whole months, clamping to the end of a short month."""
+    zero_based = value.month - 1 + months
+    year = value.year + zero_based // 12
+    month = zero_based % 12 + 1
+    last_day = [31, 29 if year % 4 == 0 and (year % 100 or year % 400 == 0) else 28,
+                31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+    return date(year, month, min(value.day, last_day))
+
+
+def resolve_recent_files_financial_year(args=None):
+    """Read the Recent Files financial-year filter.
+
+    Three inputs, in order of precedence:
+
+    ``files_start``   an explicit first day, for a year that does not begin on
+                      the 1st. Wins when present.
+    ``files_year`` +  the two dropdowns. Together they pin a year: period 7 and
+    ``files_period``  year 2024 mean 1 Jul 2024. Period alone ("all years that
+                      start in July") filters on the month across every year;
+                      year alone ("all periods in 2024") is the calendar year.
+
+    Whatever fixes the start, the window then always runs a full twelve months
+    from it, so the caller never supplies an end date and cannot ask for an
+    eleven- or thirteen-month year:
+
+        2024-01-01  ->  2024-01-01 .. 2024-12-31   (Jan-Dec 2024)
+        2024-07-01  ->  2024-07-01 .. 2025-06-30   (2024/25)
+        2025-04-06  ->  2025-04-06 .. 2026-04-05   (2025/26)
+
+    ``files_search`` matches the PBO name, either registration number, or the
+    report id when the term is numeric.
+    """
+    args = request.args if args is None else args
+    search = (args.get('files_search') or '').strip()
+
+    def as_int(name, low, high):
+        raw = (args.get(name) or '').strip()
+        if not raw.lstrip('-').isdigit():
+            return None
+        value = int(raw)
+        return value if low <= value <= high else None
+
+    period = as_int('files_period', 1, 12)
+    year = as_int('files_year', 1900, 2999)
+
+    start = parse_date(args.get('files_start'))
+    if start is None and year is not None:
+        start = date(year, period or 1, 1)
+
+    # Period chosen without a year: not a single window but the same period
+    # across every year, applied as a month match in the query.
+    month_only = period if (start is None and period is not None) else None
+
+    end = None
+    label = ''
+    slug = 'all'
+    if start:
+        end = add_months(start, 12) - timedelta(days=1)
+        if start.month == 1 and start.day == 1:
+            label = f'Jan-Dec {start.year}'
+        elif start.day == 1:
+            label = f'{MONTH_NAMES[start.month - 1]} - {MONTH_NAMES[start.month - 2]} {start.year}/{end.year % 100:02d}'
+        else:
+            label = f'{start.strftime("%d %b %Y")} to {end.strftime("%d %b %Y")} ({start.year}/{end.year % 100:02d})'
+        slug = f'fy_{start.strftime("%Y%m%d")}_{end.strftime("%Y%m%d")}'
+    elif month_only:
+        label = f'{MONTH_NAMES[month_only - 1]} - {MONTH_NAMES[month_only - 2]}, all years'
+        slug = f'period_{month_only:02d}'
+
+    return {
+        'start': start,
+        'end': end,
+        'month_only': month_only,
+        'period': period,
+        'year': year,
+        'start_value': start.isoformat() if start else '',
+        'end_value': end.isoformat() if end else '',
+        'search': search,
+        'label': label,
+        'slug': slug,
+        'is_active': bool(start or month_only or search),
+    }
+
+
+def build_recent_report_files_query(financial_year):
+    """Recent Files, narrowed by the financial year and the search box.
+
+    The year is matched on ``reporting_period_start`` — the year a report is
+    *for*, not the day somebody last touched it — so re-editing an old return
+    does not move it into the current year. Ordering stays newest-touched
+    first, which is what the card is for.
+    """
+    query = PBOReport.query.options(selectinload(PBOReport.user))
+
+    start = financial_year.get('start')
+    end = financial_year.get('end')
+    month_only = financial_year.get('month_only')
+    if start and end:
+        query = query.filter(
+            PBOReport.reporting_period_start.isnot(None),
+            PBOReport.reporting_period_start >= start,
+            PBOReport.reporting_period_start <= end,
+        )
+    elif month_only:
+        # "All financial years that start in <month>".
+        query = query.filter(
+            PBOReport.reporting_period_start.isnot(None),
+            extract('month', PBOReport.reporting_period_start) == month_only,
+        )
+
+    term = (financial_year.get('search') or '').strip()
+    if term:
+        pattern = f'%{term}%'
+        clauses = [
+            getattr(PBOReport, column).ilike(pattern)
+            for column in RECENT_FILES_SEARCH_COLUMNS
+        ]
+        if term.isdigit():
+            clauses.append(PBOReport.id == int(term))
+        query = query.filter(or_(*clauses))
+
+    return query.order_by(PBOReport.updated_at.desc(), PBOReport.id.desc())
+
+
 # Admin view route
 def build_admin_user_activity_rows(users, activity_start=None, activity_end=None):
     grouped_users = defaultdict(list)
@@ -13517,13 +13683,10 @@ def admin_view():
         .limit(20)
         .all()
     )
-    recent_report_files = (
-        PBOReport.query
-        .options(selectinload(PBOReport.user))
-        .order_by(PBOReport.updated_at.desc(), PBOReport.id.desc())
-        .limit(30)
-        .all()
-    )
+    recent_files_range = resolve_recent_files_financial_year()
+    recent_files_query = build_recent_report_files_query(recent_files_range)
+    recent_files_total = recent_files_query.count()
+    recent_report_files = recent_files_query.limit(30).all()
     deleted_file_logs = (
         UserActivityLog.query
         .options(
@@ -13602,6 +13765,19 @@ def admin_view():
         dashboard_metrics=dashboard_metrics,
         import_batches=import_batches,
         recent_report_files=recent_report_files,
+        recent_files_filters={
+            'files_start': recent_files_range['start_value'],
+            'files_end': recent_files_range['end_value'],
+            'files_search': recent_files_range['search'],
+            'files_label': recent_files_range['label'],
+            'files_period': recent_files_range['period'],
+            'files_year': recent_files_range['year'],
+            'is_active': recent_files_range['is_active'],
+            'shown': len(recent_report_files),
+            'total': recent_files_total,
+        },
+        financial_period_options=financial_period_choices(),
+        financial_year_options=available_financial_years(),
         deleted_file_rows=deleted_file_rows,
         users=users,
         backup_runtime_status=backup_status_snapshot(),
@@ -13751,6 +13927,64 @@ def admin_user_activity_export():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
         download_name=f'{filename_prefix}_{timestamp}.xlsx',
+    )
+
+
+@app.route('/admin/recent-files/export')
+@admin_required
+@login_required
+def admin_recent_files_export():
+    """Download the Recent Files list for one financial year as Excel.
+
+    Exports every matching row, not just the 30 the card shows.
+    """
+    financial_year = resolve_recent_files_financial_year()
+    reports = build_recent_report_files_query(financial_year).all()
+
+    period_label = financial_year['label'] or 'All Records'
+    export_rows = []
+    for report in reports:
+        export_rows.append({
+            'Financial Year': period_label,
+            'Report ID': report.id,
+            'File Name': report.pbo_name or f'Report #{report.id}',
+            'Registration Number': report.pbo_registration_number or report.registration_number or '',
+            'Reporting Period Start': format_date(report.reporting_period_start) if report.reporting_period_start else '',
+            'Reporting Period End': format_date(report.reporting_period_end) if report.reporting_period_end else '',
+            'Workflow Status': report.workflow_status or '',
+            'Review Status': report.review_status or '',
+            'Owner': report_owner_display(report),
+            'Last Updated': format_datetime(report.updated_at) if report.updated_at else '',
+        })
+
+    pandas_module = get_pandas()
+    columns = [
+        'Financial Year', 'Report ID', 'File Name', 'Registration Number',
+        'Reporting Period Start', 'Reporting Period End', 'Workflow Status',
+        'Review Status', 'Owner', 'Last Updated',
+    ]
+    dataframe = pandas_module.DataFrame(export_rows, columns=columns, dtype=object)
+    buffer = io.BytesIO()
+    with pandas_module.ExcelWriter(buffer, engine='openpyxl') as writer:
+        dataframe.to_excel(writer, index=False, sheet_name='Recent Files')
+        for worksheet in writer.sheets.values():
+            worksheet.freeze_panes = 'A2'
+            worksheet.auto_filter.ref = worksheet.dimensions
+            for column_cells in worksheet.columns:
+                column_letter = column_cells[0].column_letter
+                max_length = max(len(str(cell.value or '')) for cell in column_cells)
+                worksheet.column_dimensions[column_letter].width = min(max(max_length + 2, 14), 40)
+                for cell in column_cells:
+                    if isinstance(cell.value, str):
+                        cell.data_type = 's'
+
+    buffer.seek(0)
+    timestamp = utc_now().strftime('%Y%m%d_%H%M%S')
+    return send_file(
+        buffer,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'recent_files_{financial_year["slug"]}_{timestamp}.xlsx',
     )
 
 
