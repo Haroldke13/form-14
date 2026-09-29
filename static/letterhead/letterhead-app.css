@@ -1,0 +1,261 @@
+/* PBORA letterhead — Form 13 app compatibility layer.
+
+   letterhead.css is copied verbatim from the CSV_TEMPLATE package so it can
+   be refreshed from there without merge pain. That file is written for a
+   standalone A4 document: it resets :root and body to Times New Roman at
+   10pt. The Form 13 app shell (topbar, sidebar, Bootstrap, DataTables) needs
+   its own typography, so everything global that letterhead.css asserts is
+   re-asserted here for the chrome *outside* the sheet.
+
+   Load order matters:
+     letterhead.css        the sheet itself
+     letterhead-app.css    this file — hands the chrome back to the app
+
+   Inside .paper-content nothing is touched: the sheet keeps the printed
+   geometry (A4, Times, 43 mm top / 30 mm side / 35 mm bottom padding) that
+   lines up with the artwork.
+*/
+
+/* ---- Give the chrome its typography back ------------------------------- */
+body.app-shell-body {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--app-text);
+}
+
+body.app-shell-body .app-main-topbar,
+body.app-shell-body .app-sidebar,
+body.app-shell-body .app-notifications,
+body.app-shell-body .app-page-loader {
+  font-family: "Roboto", "Segoe UI", sans-serif;
+  font-size: 0.77rem;
+  line-height: 1.1;
+}
+
+body.app-shell-body .app-content {
+  font-family: "Roboto", "Segoe UI", sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* letterhead.css restyles every link; keep that to the sheet. */
+body.app-shell-body .app-main-topbar a,
+body.app-shell-body .app-sidebar a { color: inherit; }
+body.app-shell-body .app-content a { color: var(--app-primary-ink); }
+body.app-shell-body .paper-content a { color: #163b79; }
+
+/* ---- The sheet inside the app shell ------------------------------------ */
+.app-paper-main {
+  display: block;
+  padding: 10px 0 24px;
+}
+
+.app-content .paper {
+  /* The app shell already paints a light ground; lift the sheet off it. */
+  border-bottom: 0;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
+  border: 1px solid rgba(13, 44, 108, 0.08);
+}
+
+/* Clear the footer artwork on screen.
+
+   letterhead.css reserves 35 mm of bottom padding, which is exactly right for
+   a printed A4 sheet. On screen the artwork scales with the sheet's width
+   (footer.png is 1866 x 670, so it renders at ~36% of the sheet width): 107 mm
+   tall on the 297 mm register sheet, 75 mm on a portrait one. With only 35 mm
+   reserved, the last of the content — on Form 14 the "Submit Form 14" button —
+   ends up on top of the contact strip.
+
+   The values below clear the artwork with roughly 30 mm to spare, so the
+   trailing content on Form 14 — the "Submit Form 14" button and the copyright
+   line after it — sits well above the contact strip.
+
+   Screen only: the print rules in letterhead.css keep the 35 mm that lines up
+   with the printed artwork. */
+@media screen {
+  .app-content .paper { padding-bottom: 98mm; }
+  .app-content .paper.register-sheet { padding-bottom: 138mm; }
+}
+
+/* The app's own page container is redundant once the content sits on a
+   sheet — the sheet is the container.
+
+   Scoped to .app-content--paper rather than to .paper, because the container
+   is not always *inside* a sheet: the Form 14 homepage runs across three
+   sheets, so its wrappers sit around them instead. Either way the page is a
+   letterhead page and the sheet is the only surface that should be painted. */
+.app-content--paper .app-page-container {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Same for the wrapper the form pages use. base.html styles
+   .main-content-wrapper as a standalone card — white ground, 32 mm-ish
+   radius, drop shadow, 100 px of padding and min-height: 100vh — which is
+   right on a page that has nothing underneath it. On a sheet it paints a
+   second sheet on top of the first: two backgrounds, two shadows, two sets
+   of margins, and the form no longer reads as being on the letterhead.
+
+   Flatten it so the paper is the only surface. Only the layout is kept
+   (flex column and the child templates' gap); the sheet's own 30 mm / 14 mm
+   side padding supplies the margins the 100 px was standing in for.
+
+   overflow-x stays: wide tables and DataTables scroll inside the wrapper
+   rather than bleeding past the sheet edge.
+
+   Scoped to .app-content--paper for the same reason as .app-page-container
+   above: on the three-sheet homepage this wrapper is the parent of the
+   sheets, not a child of one. */
+.app-content--paper .main-content-wrapper {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Dashboard pages are wider than a portrait sheet; the register variant is
+   what base.html asks for by default. Let it use the room it has.
+
+   The cap is 297mm x 1.2 = 356.4mm — 20% wider than the A4 landscape figure
+   it started at — because the form grids need the extra column room. This is
+   the default every page inherits: no template overrides paper_classes, so
+   all 27 that extend base.html get it, as do all three sheets of the Form 14
+   homepage.
+
+   It is a cap, not a width: the sheet is width: 100%, so below roughly a
+   1350px viewport it is limited by the room actually available and the extra
+   width simply does not apply.
+
+   Print is unaffected. @page is A4 and letterhead.css sizes html/body to
+   210mm there, so width: 100% resolves to 210mm and this cap never binds —
+   measured, not assumed.
+
+   Watch the footer when changing this: the artwork scales with the sheet at
+   35.9% of its width, so at 356.4mm it renders 127.9mm tall against the
+   138mm reserved below. Widening further without raising that padding puts
+   the artwork back on top of the content. */
+.app-content .paper.register-sheet {
+  width: 100%;
+  max-width: 356.4mm;
+}
+
+/* The app shell pads .app-content; the sheet supplies its own margins, so
+   drop the outer padding on the sides and let the sheet centre itself. */
+.app-content--paper {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Form controls inside the sheet inherit Times from letterhead.css, which is
+   right for a printed form but unreadable for the app's own widgets. */
+.paper-content .form-control,
+.paper-content .form-select,
+.paper-content .btn,
+.paper-content table.dataTable,
+.paper-content .dt-container {
+  font-family: "Roboto", "Segoe UI", sans-serif;
+}
+
+/* ---- Narrow screens ----------------------------------------------------- */
+@media (max-width: 800px) {
+  .app-paper-main { padding: 0 0 12px; }
+  .app-content .paper { border-left: 0; border-right: 0; }
+
+  /* letterhead.css goes fluid here (34vw bottom, sized off the viewport);
+     the fixed mm values above would over-pad a phone. */
+  .app-content .paper,
+  .app-content .paper.register-sheet { padding-bottom: 38vw; }
+}
+
+/* ---- Print -------------------------------------------------------------- */
+@media print {
+  /* Everything that is app chrome rather than document. */
+  .app-main-topbar,
+  .app-sidebar,
+  .app-notifications,
+  .app-page-loader,
+  .app-brand,
+  .navbar-toggler {
+    display: none !important;
+  }
+
+  body.app-shell-body {
+    background: #fff !important;
+    font-family: "Times New Roman", "Liberation Serif", serif !important;
+    font-size: 10pt;
+    line-height: 1.15;
+  }
+
+  .app-shell,
+  .app-main,
+  .app-content,
+  .app-paper-main {
+    display: block;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .app-content .paper {
+    box-shadow: none;
+    border: 0;
+  }
+
+  /* Keep the artwork behind the text on paper too.
+
+     letterhead.css reserves 35 mm at the foot of a printed sheet (40 mm on the
+     register variant). That is not enough: footer.png is 1866 x 670 and bleeds
+     to the full 210 mm width, so it always renders 210 x 0.359 = 75.4 mm tall.
+     The last ~24 mm of content is therefore printed on top of the contact
+     strip — unreadable, and the artwork is what the reader sees.
+
+     The screen rules above cannot help here; they are scoped @media screen so
+     that the on-screen sheet, which is fluid, gets its own clearance. Print is
+     the easy case: the sheet is always exactly 210 mm, so the artwork is always
+     exactly 75.4 mm and a constant is safe. 80 mm clears it with ~4 mm to
+     spare. Content that no longer fits simply flows to the next sheet. */
+  .app-content .paper,
+  .app-content .paper.register-sheet {
+    padding-bottom: 80mm;
+  }
+}
+
+/* ---- Topbar Print button ------------------------------------------------ */
+.app-topbar-print {
+  flex: 0 0 auto;
+  margin-left: auto;
+  align-self: center;
+}
+
+.app-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  font-family: "Roboto", "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.app-print-btn:hover,
+.app-print-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+@media (max-width: 800px) {
+  .app-print-btn span { display: none; }
+  .app-print-btn { padding: 6px 9px; }
+}

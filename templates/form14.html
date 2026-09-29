@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-FORM 14 – PBO Annual Report
+FORM 13 – PBO Annual Report
 {% endblock %}
 
 {% block script %}
@@ -540,50 +540,18 @@ FORM 14 – PBO Annual Report
 
 {% endblock %}
 
-{% block content %}
+{# This page runs across three letterhead sheets rather than one, so it
+   overrides `paper` instead of `content` and supplies the app-content
+   wrapper itself. See the `paper` block in base.html. #}
+{% block paper %}
+<div class="main-content app-content app-content--paper">
+  <main class="app-paper-main">
 <div id="progress-bar-fixed" class="progress-bar-fixed" style="width:0;"></div>
 <button class="scroll-btn top" onclick="scrollToTop()" title="Scroll to top" aria-label="Scroll to top"
     style="display:none;"><i class="fa-solid fa-arrow-up"></i></button>
 <button class="scroll-btn bottom" onclick="scrollToBottom()" title="Scroll to bottom" aria-label="Scroll to bottom"
     style="display:none;"><i class="fa-solid fa-arrow-down"></i></button>
 <div class="main-content-wrapper">
-    <section class="hero-section fade-in">
-        <div class="hero-copy">
-            <div class="hero-eyebrow">
-                <i class="fa-solid fa-shield-heart"></i>
-                2026 PBORA Annual Return Portal
-            </div>
-            <h1 class="hero-title">Public Benefit Organizations Regulatory Authority</h1>
-            <h2 class="hero-subtitle">Annual Report Submission for Form 14</h2>
-            <p class="hero-description">
-                Welcome to the official PBORA annual returns portal. The refreshed layout keeps the form wide,
-                readable, and easier to work through while preserving the current save and submission behavior.
-            </p>
-            <div class="hero-actions">
-                <a href="#pbo-report-form" class="hero-primary-btn">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    Start Your Annual Return
-                </a>
-                <span class="hero-secondary-chip">
-                    <i class="fa-solid fa-lock"></i>
-                    Secure session and protected submission flow
-                </span>
-            </div>
-        </div>
-        <aside class="hero-sidecard" aria-label="Form preparation checklist">
-            <img src="/static/img/PBORA%20FINAL%20LOGO_0.png" alt="PBORA Logo">
-            <p class="hero-sidecard-title">Before you begin</p>
-            <ul class="hero-checklist">
-                <li><i class="fa-solid fa-circle-check"></i><span>Confirm your reporting period dates before moving into
-                        the detailed sections.</span></li>
-                <li><i class="fa-solid fa-circle-check"></i><span>Prepare audited financial information, governance
-                        details, and project breakdowns.</span></li>
-                <li><i class="fa-solid fa-circle-check"></i><span>Use the full-width tables below to enter repeated rows
-                        more comfortably.</span></li>
-            </ul>
-        </aside>
-    </section>
-
     <section class="info-cards fade-in delay-1">
         <div class="info-card">
             <i class="fa-solid fa-circle-check" style="color: #22c55e; font-size: 2rem;"></i>
@@ -696,6 +664,8 @@ FORM 14 – PBO Annual Report
                         window.useForm14InlineDraftManager = true;
                     </script>
                     <form method="POST" id="pbo-report-form" class="w-100">
+                        {% call lh.paper('', label='PBORA Form 13 — sheet 1 of 3',
+                                          classes='register-sheet') %}
                         <input type="hidden" name="submission_token" value="{{ submission_token }}">
                         <script defer>
                             document.addEventListener("DOMContentLoaded", function () {
@@ -5856,6 +5826,10 @@ FORM 14 – PBO Annual Report
                                 </ol>
                             </div>
                         </div>
+                        {% endcall %}
+
+                        {% call lh.paper('', label='PBORA Form 13 — sheet 2 of 3',
+                                          classes='register-sheet') %}
 
                         <hr> <br>
                         <script>
@@ -11355,6 +11329,11 @@ FORM 14 – PBO Annual Report
                                 </div>
 
                             </div>
+                            </div>{# #project-implementation-section, opened line 7688 #}
+                        {% endcall %}
+
+                        {% call lh.paper('', label='PBORA Form 13 — sheet 3 of 3',
+                                          classes='register-sheet') %}
 
 
 
@@ -14188,7 +14167,7 @@ FORM 14 – PBO Annual Report
                                 <div id="submission-area">
                                     {% if current_user.is_authenticated %}
                                     <button type="submit" class="submit-btn">
-                                        Submit Form 14
+                                        Submit Form 13
                                     </button>
                                     {% else %}
                                     <div style="color: red; font-weight: bold; margin: 20px 0;">
@@ -14202,6 +14181,7 @@ FORM 14 – PBO Annual Report
                                 <br>
 
                             </div>
+                        {% endcall %}
 
                     </form>
 
@@ -14211,10 +14191,9 @@ FORM 14 – PBO Annual Report
                     </div>
                 </div>
             </div>
-        </div>
-
-        </body>
-
-        </html>
-
-        {% endblock %}
+        </div>{# .container-fluid, opened line 692 #}
+    </div>{# .app-page-container.form14-page-shell, opened line 691 #}
+</div>{# .main-content-wrapper, opened line 549 #}
+  </main>
+</div>
+{% endblock %}

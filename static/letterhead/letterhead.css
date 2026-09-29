@@ -1,0 +1,122 @@
+/* PBORA letterhead chrome — header, footer and page frame.
+   Extracted from pbo_register/static/register/form.css so any page in the
+   family can reuse the same sheet without pulling in the Form 1 field styles.
+
+   Geometry matches the printed source: A4, Times New Roman, 30 mm side
+   margins, the letterhead artwork 96.52 mm wide at 3.05 mm from the top and
+   the footer artwork bled to the full page width.
+
+   Layers, in order:
+     letterhead.css   header/footer/page frame (this file)
+     <page>.css       whatever the individual page adds inside .paper-content
+*/
+
+:root {
+  color-scheme: light;
+  font-family: "Times New Roman", "Liberation Serif", serif;
+  color: #000;
+  background: #fff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #fff; font-size: 10pt; line-height: 1.15; }
+[hidden] { display: none !important; }
+a { color: #163b79; }
+button, input, textarea, select { font: inherit; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid #31508d; outline-offset: 3px; }
+
+/* ---- Screen toolbar (the app header above the paper) -------------------- */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+  max-width: 210mm; margin: auto; padding: 12px 18px;
+  border-bottom: 1px solid #ddd;
+  font: 13px Arial, sans-serif;
+}
+.toolbar > div { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.toolbar a { color: #111; }
+.toolbar button {
+  padding: 0; border: 0; border-bottom: 1px solid #555;
+  background: #fff; color: #111; cursor: pointer;
+}
+.toolbar form { display: inline; }
+.toolbar .current { font-weight: bold; }
+
+/* ---- Flash messages and error summaries -------------------------------- */
+.notice, .error-summary {
+  max-width: 190mm; margin: 18px auto; padding: 12px 16px;
+  font: 14px/1.5 Arial, sans-serif; border: 1px solid #bbb;
+}
+.error-summary { border-color: #a02028; }
+.error-summary ul { margin-bottom: 0; padding-left: 22px; }
+.error-summary a { color: #8b1920; }
+
+/* ---- The sheet: letterhead header, footer artwork, page number ---------- */
+.paper {
+  position: relative; isolation: isolate;
+  width: 210mm; min-height: 297mm; margin: 0 auto;
+  padding: 43mm 30mm 35mm;              /* top clears the letterhead, bottom the footer */
+  background: #fff; border-bottom: 1px solid #e5e5e5;
+}
+.paper-content { position: relative; z-index: 1; }
+
+.letterhead {
+  position: absolute; top: 3.05mm; left: 50%; transform: translateX(-50%);
+  width: 96.52mm;
+}
+.letterhead img { display: block; width: 100%; height: auto; }
+
+.letter-footer {
+  position: absolute; z-index: 0; bottom: 0; left: 0; width: 100%;
+  pointer-events: none;
+}
+.letter-footer img { display: block; width: 100%; height: auto; }
+
+.page-number {
+  position: absolute; z-index: 2; bottom: 3.5mm; left: 0; width: 100%;
+  text-align: center; font-size: 9pt;
+}
+
+/* A landscape-ish register sheet: wider paper, narrower side margins. */
+.paper.register-sheet { width: auto; max-width: 297mm; min-height: 297mm; padding: 43mm 14mm 40mm; }
+.paper.register-sheet .paper-content { font-size: 12px; }
+
+/* ---- Headings used on the sheet ---------------------------------------- */
+.form-code { display: flex; justify-content: flex-end; align-items: baseline; gap: 13mm; margin: 2mm 0; }
+.paper-content h1 { font-size: 10pt; line-height: 1.35; text-align: center; margin: 3mm 0; font-weight: bold; }
+.paper-content h2 { font-size: 10pt; line-height: 1.3; text-align: center; text-decoration: underline; margin: 4mm 0; font-weight: bold; }
+.paper-content > h2:first-child { margin-top: 0; }
+.mixed-case { text-transform: none; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* ---- Narrow screens ----------------------------------------------------- */
+@media (max-width: 800px) {
+  .paper { width: 100%; min-height: 0; padding: 41mm 6vw 34vw; }
+  .paper.register-sheet { padding: 41mm 4vw 34vw; }
+  .letterhead { width: min(46%, 96.52mm); }
+  .page-number { bottom: 1.5vw; font-size: 8pt; }
+  .form-code { flex-wrap: wrap; gap: 4px 16px; }
+  .notice, .error-summary { margin: 12px; }
+}
+
+/* ---- Print -------------------------------------------------------------- */
+@page { size: A4; margin: 0; }
+@media print {
+  html, body {
+    width: 210mm; background: #fff; margin: 0;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .no-print { display: none !important; }
+  .paper {
+    width: 210mm; min-height: 296.9mm; margin: 0;
+    padding: 43mm 30mm 35mm; border: 0; break-after: page;
+  }
+  .paper:last-of-type { break-after: auto; }
+  .letterhead { width: 96.52mm; }
+  .page-number { bottom: 3.5mm; font-size: 9pt; }
+  a { color: #000; text-decoration: none; }
+}

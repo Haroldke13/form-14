@@ -1,0 +1,91 @@
+{#
+  Reusable PBORA header/footer macros.
+
+  Import at the top of any template:
+
+    {% import "letterhead/_letterhead.html" as lh with context %}
+
+  Then wrap page content in a sheet:
+
+    {% call lh.paper('Page 1 of 5', label='Organization details') %}
+      <h1>YOUR HEADING</h1>
+      ...
+    {% endcall %}
+
+  `with context` is required: the macros call url_for().
+#}
+
+{# Where the artwork lives under the Flask static folder. Override by setting
+   `letterhead_dir` in the template context or in the render call. #}
+{% set _dir = letterhead_dir | default('letterhead') %}
+
+{% macro header() -%}
+<header class="letterhead">
+  <img src="{{ url_for('static', filename=_dir ~ '/letterhead.png') }}"
+       alt="Republic of Kenya — Public Benefit Organizations Regulatory Authority"
+       width="3509" height="1302">
+</header>
+{%- endmacro %}
+
+{% macro footer() -%}
+<footer class="letter-footer">
+  <img src="{{ url_for('static', filename=_dir ~ '/footer.png') }}"
+       alt="Regulatory Excellence for Public Good. Cooperative Bank House, 15th Floor, Haile Selassie Avenue, P.O. Box 44617 00100, Nairobi, Kenya. info@pbora.go.ke — www.pbora.go.ke"
+       width="1866" height="670">
+</footer>
+{%- endmacro %}
+
+{#
+  One A4 sheet with the letterhead above the content and the footer artwork
+  bled to the page edge.
+
+  caption  text printed at the foot of the sheet ("Page 1 of 5", "Register of
+           applications"); pass '' for no caption, or 'auto' to let
+           letterhead.js number the sheet as "Page N of M".
+  label    accessible name for the section.
+  classes  extra classes on .paper — 'register-sheet' widens it for tables.
+  page     value for data-page, used by the print paginator if you run one.
+#}
+{% macro paper(caption='', label='Document page', classes='', page=none) -%}
+<section class="paper{% if classes %} {{ classes }}{% endif %}" aria-label="{{ label }}"{% if page is not none %} data-page="{{ page }}"{% endif %}>
+  {{ header() }}
+  <div class="paper-content">{{ caller() }}</div>
+  {{ footer() }}
+  {% if caption == 'auto' %}<div class="page-number" data-page-caption></div>
+  {% elif caption %}<div class="page-number">{{ caption }}</div>{% endif %}
+</section>
+{%- endmacro %}
+
+{#
+  The screen toolbar above the paper. `title` sits on the left; the links and
+  buttons you pass in the caller sit on the right.
+
+    {% call lh.toolbar('FORM 1 · Saved applications', label='Register actions') %}
+      <a href="...">New application</a>
+      <button type="button" data-print>Print</button>
+    {% endcall %}
+#}
+{% macro toolbar(title, label='Page actions') -%}
+<nav class="toolbar no-print" aria-label="{{ label }}">
+  <span>{{ title }}</span>
+  <div>{{ caller() }}</div>
+</nav>
+{%- endmacro %}
+
+{# Flask flashed messages, styled as notices. #}
+{% macro flashes() -%}
+{% with messages = get_flashed_messages() %}
+  {% for message in messages %}<p class="notice no-print" role="status">{{ message }}</p>{% endfor %}
+{% endwith %}
+{%- endmacro %}
+
+{# An error summary that links to the offending fields. `errors` is a dict of
+   field name -> message, matching the Form 1 convention. #}
+{% macro error_summary(errors, heading='Please check the following before saving:') -%}
+{% if errors %}
+<div class="error-summary no-print" role="alert" tabindex="-1" id="form-errors">
+  <strong>{{ heading }}</strong>
+  <ul>{% for name, error in errors.items() %}<li id="error-{{ name }}"><a href="#{{ name }}">{{ error }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+{%- endmacro %}

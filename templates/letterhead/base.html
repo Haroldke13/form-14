@@ -1,0 +1,51 @@
+{#
+  Base layout carrying the PBORA letterhead chrome.
+
+    {% extends "letterhead/base.html" %}
+    {% block page_title %}Saved applications{% endblock %}
+    {% block toolbar_title %}FORM 1 · Saved applications{% endblock %}
+    {% block toolbar_actions %}<a href="{{ url_for('register.new') }}">New application</a>{% endblock %}
+    {% block content %}
+      {% call lh.paper('Register of applications', classes='register-sheet') %}
+        <h1>REGISTER OF APPLICATIONS</h1>
+      {% endcall %}
+    {% endblock %}
+
+  The nonce guard lets the same file work with or without a CSP nonce
+  provider (the PBO Register app exposes csp_nonce() as a Jinja global).
+#}
+{% import "letterhead/_letterhead.html" as lh with context %}
+{%- set nonce = ' nonce="' ~ csp_nonce() ~ '"' if csp_nonce is defined else '' -%}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block page_title %}Document{% endblock %} · PBO Register</title>
+  <link rel="icon" href="data:,">
+  {% block head_styles %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename=(letterhead_dir | default('letterhead')) ~ '/letterhead.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+{% block toolbar %}
+<nav class="toolbar no-print" aria-label="{% block toolbar_label %}Page actions{% endblock %}">
+  <span>{% block toolbar_title %}PBO REGISTER{% endblock %}</span>
+  <div>{% block toolbar_actions %}
+    <button type="button" data-print>Print</button>
+  {% endblock %}</div>
+</nav>
+{% endblock %}
+
+{% block notices %}{% endblock %}
+{{ lh.flashes() }}
+{% block errors %}{{ lh.error_summary(errors | default(none)) }}{% endblock %}
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename=(letterhead_dir | default('letterhead')) ~ '/letterhead.js') }}"{{ nonce | safe }} defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -153,6 +153,36 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.config['RESET_TOKEN_MAX_AGE_SECONDS'] = int(os.getenv('RESET_TOKEN_MAX_AGE_SECONDS', '3600'))
 app.config['SUPERADMIN_RESET_FORWARD_EMAIL'] = os.getenv('SUPERADMIN_RESET_FORWARD_EMAIL', 'joelharold@ymail.com')
 
+
+def resolve_asset_version():
+    """Cache-busting stamp for the ?v= on static assets.
+
+    base.html used to fall back to a hard-coded date, so editing a stylesheet
+    left the URL unchanged and browsers kept serving the cached copy. Stamp it
+    from the newest mtime among the stylesheets and scripts instead, so the URL
+    moves whenever one of them is edited. Only those folders are walked; the
+    media and export trees under static/ are large and never referenced with a
+    version.
+    """
+    configured = os.getenv('ASSET_VERSION')
+    if configured:
+        return configured
+
+    newest = 0.0
+    for folder in ('css', 'js', 'letterhead'):
+        directory = os.path.join(app.static_folder or 'static', folder)
+        if not os.path.isdir(directory):
+            continue
+        for entry in os.scandir(directory):
+            if entry.is_file():
+                newest = max(newest, entry.stat().st_mtime)
+    if not newest:
+        return '20260929'
+    return time.strftime('%Y%m%d%H%M%S', time.localtime(newest))
+
+
+app.config['ASSET_VERSION'] = resolve_asset_version()
+
 def env_flag(name, default=False):
     value = os.getenv(name)
     if value is None:
@@ -16487,7 +16517,7 @@ def my_file_open(file_id):
 
 
 DATA_INTERPRETATION_SOURCE_LABELS = {
-    'reports': 'Form 14 reports',
+    'reports': 'Form 13 reports',
     'registrations': 'Registration dates',
     'projects': 'Project implementations',
     'project_summary': 'Projects carried out',
@@ -16675,7 +16705,7 @@ def build_data_interpretation_topic_plan():
             ],
             'visuals': ['Register activity bars', 'Annual movement chart', 'Status summary table'],
             'deliverable': 'Register activity summary based on the current filing database.',
-            'gap': 'This page measures new registrations and active filing movement from Form 14 records already stored in the app.',
+            'gap': 'This page measures new registrations and active filing movement from Form 13 records already stored in the app.',
             'source_keys': ['registrations', 'reports'],
         },
         {
@@ -16690,7 +16720,7 @@ def build_data_interpretation_topic_plan():
             ],
             'visuals': ['Submission trend line', 'Audited vs unaudited stacked bars', 'Compliance KPI tiles'],
             'deliverable': 'Annual filing and compliance trend view.',
-            'gap': 'Historical replication quality depends on how many older Form 14 years have already been loaded into the database.',
+            'gap': 'Historical replication quality depends on how many older Form 13 years have already been loaded into the database.',
             'source_keys': ['reports', 'governance'],
         },
         {
@@ -17770,7 +17800,7 @@ def build_data_interpretation_context(scope_label, fiscal_year_options, selected
     coverage_notes = [
         'Chapter Three is the strongest area in the current schema because projects, counties, employment, and collaborations are already structured.',
         'Chapter Four becomes highly reliable after donor-type, continent, and expenditure-line mappings are added.',
-        'Chapter Two now focuses on the registration and filing signals already captured inside Form 14 data.',
+        'Chapter Two now focuses on the registration and filing signals already captured inside Form 13 data.',
     ]
 
     source_chart = {

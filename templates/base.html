@@ -1,13 +1,16 @@
+{# The PBORA letterhead chrome from the CSV_TEMPLATE package. `with context`
+   is required: the macros call url_for(). #}
+{% import "letterhead/_letterhead.html" as lh with context %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Form 14 - Annual Returns Management System">
+  <meta name="description" content="Form 13 - Annual Returns Management System">
   <meta name="theme-color" content="#0D2C6C">
   <title>{% block title %}Organization Forms{% endblock %}</title>
-  {% set asset_version = config.get('ASSET_VERSION', '20260319') %}
+  {% set asset_version = config.get('ASSET_VERSION', '20260929') %}
 
   {% if request.endpoint == 'home' %}
   <script>
@@ -204,7 +207,7 @@
       padding: 0 10px;
       border-radius: 10px;
       text-decoration: none;
-      color: rgba(255, 255, 255, 0.92);
+      color: #ffffff;
       font-weight: 700;
       transition: background-color 0.18s ease, color 0.18s ease;
       overflow: hidden;
@@ -254,9 +257,11 @@
       background: rgba(247, 207, 108, 0.7);
     }
 
+    /* Bootstrap's text-warning / text-danger would tint these amber or red
+       against the dark blue bar; the navbar is uniformly white. */
     .app-nav-link.text-warning,
     .app-nav-link.text-danger {
-      color: rgba(255, 255, 255, 0.92) !important;
+      color: #ffffff !important;
     }
 
     .app-nav-link i {
@@ -283,7 +288,7 @@
     .app-nav-more-toggle {
       border: 0;
       background: rgba(255, 255, 255, 0.08);
-      color: rgba(255, 255, 255, 0.92);
+      color: #ffffff;
     }
 
     .app-nav-more-toggle:hover,
@@ -403,7 +408,7 @@
     .app-main-subtitle {
       margin: 0;
       font-size: 0.77rem;
-      color: rgba(255, 255, 255, 0.82);
+      color: #ffffff;
       line-height: 1.1;
     }
 
@@ -2173,8 +2178,11 @@
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
 
+      /* The expanded menu is part of the top bar, so it takes the bar's own
+         dark blue. It used to carry a lighter gradient (#2a48aa -> #1e3a8a),
+         which made the navbar change colour below 768px. */
       .navbar-collapse {
-        background: linear-gradient(180deg, #2a48aa, #1e3a8a);
+        background: var(--app-primary);
         margin-top: 10px;
         padding: 10px;
         border-radius: 8px;
@@ -2540,6 +2548,13 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=asset_version) }}">
   <script defer src="{{ url_for('static', filename='js/script.js', v=asset_version) }}"></script>
+
+  {# PBORA letterhead chrome. letterhead.css is the CSV_TEMPLATE file verbatim;
+     letterhead-app.css hands the app shell its own typography back. Both load
+     after style.css so the sheet wins inside .paper. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='letterhead/letterhead.css', v=asset_version) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='letterhead/letterhead-app.css', v=asset_version) }}">
+  <script defer src="{{ url_for('static', filename='letterhead/letterhead.js', v=asset_version) }}"></script>
 </head>
 
 <body class="app-shell-body">
@@ -2558,14 +2573,18 @@
           <div class="app-topbar-head">
             <a class="app-brand" href="{{ url_for('home') if current_user.is_authenticated else url_for('login') }}" title="{{ 'Go to Home' if current_user.is_authenticated else 'Go to Login' }}">
               <img src="{{ url_for('static', filename='img/PBORA FINAL LOGO_0.png') }}" alt="PBORA Logo" class="app-brand-mark">
-              <div class="app-brand-meta">
-                <p class="app-brand-title">PBO Sector Report</p>
-                <p class="app-brand-subtitle">Digital governance, compliance, and sector oversight.</p>
-              </div>
             </a>
             <div class="app-topbar-copy">
               <p class="app-main-title">Public Benefit Organizations Regulatory Authority</p>
               <p class="app-main-subtitle">Annual returns, sector intelligence, and compliance oversight.</p>
+            </div>
+
+            {# Wired by letterhead.js; the sheet below is what gets printed. #}
+            <div class="app-topbar-print no-print">
+              <button type="button" class="app-print-btn" data-print title="Print this page" aria-label="Print this page">
+                <i class="bi bi-printer"></i>
+                <span>Print</span>
+              </button>
             </div>
           </div>
 
@@ -2578,9 +2597,9 @@
 
               <div class="collapse navbar-collapse" id="appSidebarNav" title="Navigation Links">
                 <div class="app-sidebar-nav w-100">
-                  <a class="app-nav-link{% if request.endpoint == 'home' %} active{% endif %}{% if not current_user.is_authenticated %} disabled{% endif %}" href="{{ url_for('home') if current_user.is_authenticated else url_for('login') }}" title="Form 14" aria-label="Form 14"{% if request.endpoint == 'home' %} data-prevent-reload="true" aria-current="page"{% endif %}{% if not current_user.is_authenticated %} aria-disabled="true"{% endif %}>
+                  <a class="app-nav-link{% if request.endpoint == 'home' %} active{% endif %}{% if not current_user.is_authenticated %} disabled{% endif %}" href="{{ url_for('home') if current_user.is_authenticated else url_for('login') }}" title="Form 13" aria-label="Form 13"{% if request.endpoint == 'home' %} data-prevent-reload="true" aria-current="page"{% endif %}{% if not current_user.is_authenticated %} aria-disabled="true"{% endif %}>
                     <i class="bi bi-file-earmark-text"></i>
-                    <span>Form 14</span>
+                    <span>Form 13</span>
                   </a>
                   {% if current_user.is_authenticated and current_user.role == 'admin' and current_user.is_authorized %}
                   <a class="app-nav-link{% if request.endpoint == 'reports_list' %} active{% endif %}" href="{{ url_for('reports_list') }}" title="Reports" aria-label="Reports">
@@ -2734,9 +2753,35 @@
     {% endif %}
   {% endwith %}
 
-  <div class="main-content app-content">
-    {% block content %}{% endblock %}
+  {# Every page sits on a PBORA letterhead sheet. A child template steers the
+     sheet by setting these at its top level, above its blocks:
+
+       {% set paper_classes = '' %}        portrait A4 instead of the wide
+                                           'register-sheet' default (297 mm,
+                                           which is what tables and the
+                                           dashboards need)
+       {% set paper_caption = 'auto' %}    number the sheets "Page N of M";
+                                           any other text prints verbatim
+       {% set paper_label = 'Reports' %}   the section's accessible name
+
+     A view function can pass the same names in the render context. #}
+  {# One sheet is the right answer for almost every page, so that is the
+     default. A page that needs to run across several sheets — the Form 14
+     homepage splits itself into three, each with its own letterhead and
+     footer — overrides `paper` instead of `content` and emits its own
+     lh.paper() calls. Overriding `paper` replaces this wrapper entirely, so
+     such a template supplies .app-content / .app-paper-main itself. #}
+  {% block paper %}
+  <div class="main-content app-content app-content--paper">
+    <main class="app-paper-main">
+      {% call lh.paper(paper_caption | default(''),
+                       label=paper_label | default('PBORA Form 13'),
+                       classes=paper_classes | default('register-sheet')) %}
+        {% block content %}{% endblock %}
+      {% endcall %}
+    </main>
   </div>
+  {% endblock %}
   </div>
   </div>
   <style>
